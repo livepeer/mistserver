@@ -164,6 +164,8 @@ namespace Mist{
     HIGH_MSG("Sending this index: %s", result.str().c_str());
     return result.str();
   }
+  
+  bool OutHLS::listenMode(){return !(config->getString("ip").size());}
 
   OutHLS::OutHLS(Socket::Connection &conn) : TSOutput(conn){
     uaDelay = 0;
@@ -184,6 +186,8 @@ namespace Mist{
 
   void OutHLS::init(Util::Config *cfg){
     HTTPOutput::init(cfg);
+    capa.removeMember("deps");
+    capa["optdeps"] = "HTTP";
     capa["name"] = "HLS";
     capa["friendly"] = "Apple segmented over HTTP (HLS)";
     capa["desc"] =
@@ -219,6 +223,7 @@ namespace Mist{
     capa["optional"]["listlimit"]["default"] = 0;
     capa["optional"]["listlimit"]["type"] = "uint";
     capa["optional"]["listlimit"]["option"] = "--list-limit";
+    capa["optional"]["listlimit"]["short"] = "y";
 
     cfg->addOption("nonchunked",
                    JSON::fromString("{\"short\":\"C\",\"long\":\"nonchunked\",\"help\":\"Do not "
@@ -228,6 +233,8 @@ namespace Mist{
         "Disables chunked transfer encoding, forcing per-segment buffering. Reduces performance "
         "significantly, but increases compatibility somewhat.";
     capa["optional"]["nonchunked"]["option"] = "--nonchunked";
+    capa["optional"]["nonchunked"]["short"] = "C";
+    capa["optional"]["nonchunked"]["default"] = false;
 
     cfg->addOption("chunkpath",
                    JSON::fromString("{\"arg\":\"string\",\"default\":\"\",\"short\":\"e\",\"long\":"
@@ -241,6 +248,7 @@ namespace Mist{
     capa["optional"]["chunkpath"]["option"] = "--chunkpath";
     capa["optional"]["chunkpath"]["short"] = "e";
     capa["optional"]["chunkpath"]["default"] = "";
+    cfg->addConnectorOptions(8081, capa);
   }
 
   void OutHLS::onHTTP(){
