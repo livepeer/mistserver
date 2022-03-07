@@ -866,6 +866,8 @@ install(
   TARGETS MistController
   DESTINATION bin
 )
+# Needed to make parallel builds work well
+add_dependencies(MistOutHTTP MistController)
 
 ########################################
 # Make Clean                           #
