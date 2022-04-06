@@ -23,6 +23,8 @@ namespace Mist{
     capa["source_match"].append("/*.dtsc");
     capa["source_match"].append("dtsc://*");
     capa["always_match"].append("dtsc://*"); // can be said to always-on mode
+    capa["source_match"].append("dtscs://*");
+    capa["always_match"].append("dtscs://*");
     capa["source_file"] = "$source";
     capa["codecs"]["video"].append("H264");
     capa["codecs"]["video"].append("H263");
@@ -77,7 +79,7 @@ namespace Mist{
   bool InputDTSC::needsLock(){
     if (!lockCache){
       lockNeeded =
-          config->getString("input").substr(0, 7) != "dtsc://" && config->getString("input") != "-";
+          config->getString("input").substr(0, 7) != "dtsc://" && config->getString("input").substr(0, 8) != "dtscs://" && config->getString("input") != "-";
       lockCache = true;
     }
     return lockNeeded;
