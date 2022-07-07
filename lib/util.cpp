@@ -9,6 +9,7 @@
 #include "dtsc.h"
 #include "procs.h"
 #include "timing.h"
+#include "triggers.h"
 #include "urireader.h"
 #include "url.h"
 
@@ -197,7 +198,7 @@ namespace Util{
     }
     val = val.substr(startPos, length);
   }
-  
+
   /// \brief splits a string on commas and returns a list of substrings
   void splitString(std::string &src, char delim, std::deque<std::string> &result){
     result.clear();
@@ -314,7 +315,7 @@ namespace Util{
     DONTEVEN_MSG("Waiting %" PRId64 " ms out of %" PRId64 " for iteration %zu/%zu", w, maxWait, currIter, maxIter);
     return w;
   }
- 
+
   /// Secure random bytes generator
   /// Uses /dev/urandom internally
   void getRandomBytes(void * dest, size_t len){
@@ -555,7 +556,7 @@ namespace Util{
           while (line.find('\n') != std::string::npos){line.erase(line.find('\n'));}
           dprintf(out, "INFO|%s|%d||%s|%s\n", progName, pid, Util::streamName, line.c_str());
           line.clear();
-        }      
+        }
       }else{Util::sleep(25);}
     }
     errStream.close();
