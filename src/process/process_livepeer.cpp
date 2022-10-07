@@ -716,6 +716,7 @@ int main(int argc, char *argv[]){
     capa["ainfo"]["bc"]["name"] = "Currently used broadcaster";
     capa["ainfo"]["sinkTime"]["name"] = "Sink timestamp";
     capa["ainfo"]["sourceTime"]["name"] = "Source timestamp";
+    capa["ainfo"]["percent_done"]["name"] = "Percentage for VoD transcodes";
 
     std::cout << capa.toString() << std::endl;
     return -1;
@@ -945,6 +946,12 @@ int main(int argc, char *argv[]){
       pData["ainfo"]["fail_other"] = statFailOther;
       pData["ainfo"]["sourceTime"] = statSourceMs;
       pData["ainfo"]["sinkTime"] = statSinkMs;
+      M.reloadReplacedPagesIfNeeded();
+      if (M.getVod()){
+        uint64_t start = M.getFirstms(sourceIdx);
+        uint64_t end = M.getLastms(sourceIdx);
+        pData["ainfo"]["percent_done"] = 100 * (statSinkMs - start) / (end - start);
+      }
       {
         std::lock_guard<std::mutex> guard(broadcasterMutex);
         pData["ainfo"]["bc"] = Mist::currBroadAddr;
