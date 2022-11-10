@@ -44,6 +44,7 @@ namespace Mist{
     capa["codecs"]["audio"].append("AAC");
     capa["codecs"]["audio"].append("AC3");
     capa["codecs"]["audio"].append("MP3");
+    capa["codecs"]["audio"].append("EAC3");
     readPos = 0;
     nextBox = 0;
   }
