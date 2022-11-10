@@ -199,7 +199,7 @@ namespace MP4{
       initBox = vEntryBox.getPASP();
       if (initBox.isType("av1C")){initData.assign(initBox.payload(), initBox.payloadSize());}
     }
-    if (sType == "mp4a" || sType == "aac " || sType == "ac-3"){
+    if (sType == "mp4a" || sType == "aac " || sType == "ac-3" || sType == "ec-3"){
       MP4::AudioSampleEntry &aEntryBox = (MP4::AudioSampleEntry &)sEntryBox;
       audRate = aEntryBox.getSampleRate();
       audChannels = aEntryBox.getChannelCount();
@@ -207,6 +207,9 @@ namespace MP4{
 
       if (sType == "ac-3"){
         codec = "AC3";
+        isCompatible = true;
+      }else if (sType == "ec-3"){
+        codec = "EAC3";
         isCompatible = true;
       }else{
         MP4::Box codingBox = aEntryBox.getCodecBox();
