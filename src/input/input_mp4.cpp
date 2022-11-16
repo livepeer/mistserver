@@ -131,6 +131,7 @@ namespace Mist{
       Util::logExitReason(ER_FORMAT_SPECIFIC, "Input from stdin not yet supported");
       return false;
     }
+    if (config->getBool("headeronly")){return true;}
     if (!config->getString("streamname").size()){
       if (config->getString("output") == "-"){
         Util::logExitReason(ER_FORMAT_SPECIFIC, "Output to stdout not yet supported");
