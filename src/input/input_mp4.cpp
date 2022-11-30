@@ -170,7 +170,15 @@ namespace Mist{
     if (M){
       bps = 0;
       std::set<size_t> tracks = M.getValidTracks();
-      for (std::set<size_t>::iterator it = tracks.begin(); it != tracks.end(); it++){bps += M.getBps(*it);}
+      for (std::set<size_t>::iterator it = tracks.begin(); it != tracks.end(); it++){
+        bps += M.getBps(*it);
+        mp4TrackHeader &thisHeader = headerData(M.getID(*it));
+        if (thisHeader.rotation){
+          JSON::Value json;
+          json["rotation"] = thisHeader.rotation;
+          meta.setTrackExtraJSON(*it, json);
+        }
+      }
       return true;
     }
 
@@ -197,6 +205,11 @@ namespace Mist{
       meta.setInit(tNumber, it->initData);
       meta.setLang(tNumber, it->lang);
       if (it->trackType == "video"){
+        if (tkhdBox.getRotation()){
+          JSON::Value json;
+          json["rotation"] = tkhdBox.getRotation();
+          meta.setTrackExtraJSON(tNumber, json);
+        }
         meta.setType(tNumber, "video");
         meta.setWidth(tNumber, it->vidWidth);
         meta.setHeight(tNumber, it->vidHeight);
