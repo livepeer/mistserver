@@ -288,6 +288,8 @@ namespace DTSC{
 
     Util::RelAccXFieldData framesTimeField;
     Util::RelAccXFieldData framesDataField;
+
+    Util::RelAccXFieldData extraJSON;
   };
 
 
@@ -451,6 +453,9 @@ namespace DTSC{
     /*LTS-START
     uint64_t getFragmentDuration() const{return DEFAULT_FRAGMENT_DURATION;}
     LTS-END*/
+
+    void setTrackExtraJSON(size_t trackIdx, const JSON::Value & val);
+    JSON::Value getTrackExtraJSON(size_t trackIdx) const;
 
     void setVod(bool vod);
     bool getVod() const;
