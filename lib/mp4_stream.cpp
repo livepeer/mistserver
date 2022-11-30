@@ -107,6 +107,7 @@ namespace MP4{
 
     MDIA mdiaBox = trakBox.getChild<MDIA>();
     timeScale = mdiaBox.getChild<MDHD>().getTimeScale();
+    rotation = trakBox.getChild<TKHD>().getRotation();
     lang = mdiaBox.getChild<MP4::MDHD>().getLanguage();
 
     TKHD tkhd = trakBox.getChild<TKHD>();

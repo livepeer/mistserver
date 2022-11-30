@@ -63,6 +63,7 @@ namespace MP4{
     std::string lang; ///< Language of the track
     uint32_t vidWidth, vidHeight;
     uint32_t audChannels, audRate, audSize;
+    uint32_t rotation;
 
   private:
     /// Internal function that increases the time of the current part to the next part
