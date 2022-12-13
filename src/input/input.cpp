@@ -773,6 +773,21 @@ namespace Mist{
     return returnCode;
   }
 
+  /// \brief Checks if we should abort for a unsupported track
+  /// \return false if further processing should be aborted
+  bool Input::onUnsupportedTrack(std::string trackType){
+    if (Triggers::shouldTrigger("INPUT_RECOVERABLE", streamName)){
+      std::string payload;
+      std::ostringstream pidString;
+      pidString << getpid();
+      payload = streamName + "\n" + config->getString("input") + "\n" \
+        + "MistIn" + capa["name"].asString() + "\n" + pidString.str() + "\n" \
+        + ER_UNSUPPORTED + "\n" + "Unsupported track type: " + trackType;
+      return Triggers::doTrigger("INPUT_RECOVERABLE", payload, streamName);
+    }
+    return true;
+  }
+
   /// Checks in the server configuration if this stream is set to always on or not.
   /// Returns true if it is, or if the stream could not be found in the configuration.
   /// If the compiled default debug level is < INFO, instead returns false if the stream is not found.

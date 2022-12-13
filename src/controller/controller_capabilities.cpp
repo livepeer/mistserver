@@ -121,6 +121,12 @@ namespace Controller{
     trgs["INPUT_ABORT"]["response"] = "ignored";
     trgs["INPUT_ABORT"]["response_action"] = "None.";
 
+    trgs["INPUT_RECOVERABLE"]["when"] = "Every time an input encounters a recoverable error";
+    trgs["INPUT_RECOVERABLE"]["stream_specific"] = true;
+    trgs["INPUT_RECOVERABLE"]["payload"] = "stream name (string)\nsource URI (string)\nbinary name (string)\npid (integer)\nmachine-readable error message (string, enum)\nhuman-readable message (string)";
+    trgs["INPUT_RECOVERABLE"]["response"] = "when-blocking";
+    trgs["INPUT_RECOVERABLE"]["response_action"] = "If false, further processing is aborted";
+
     trgs["RTMP_PUSH_REWRITE"]["when"] =
         "On incoming RTMP pushes, allows rewriting the RTMP URL to/from custom formatting";
     trgs["RTMP_PUSH_REWRITE"]["stream_specific"] = false;
