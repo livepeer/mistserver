@@ -2332,7 +2332,7 @@ namespace Mist{
           thisPacket.null();
           return true;
         }else if (!Util::startInput(streamName)){
-          Util::logExitReason(ER_UNKNOWN, "VoD stream source shut down and could not be restarted");
+          Util::logExitReason(ER_SHM_LOST, "VoD stream source shut down and could not be restarted");
           thisPacket.null();
           return true;
         }
