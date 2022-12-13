@@ -319,6 +319,7 @@ static inline void show_stackframe(){}
 #define ER_UNSUPPORTED "UNSUPPORTED"
 #define ER_SEGFAULT "SEGFAULT"
 #define ER_TRIGGER "TRIGGER"
+#define ER_UNSUPPORTED "UNSUPPORTED"
 #define ER_SIGTRAP "SIGTRAP"
 #define ER_SIGABRT "SIGABRT"
 #define ER_SIGILL "SIGILL"
