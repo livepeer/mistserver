@@ -588,8 +588,7 @@ namespace Mist{
       }
       HIGH_MSG("Done waiting for child for stream %s", streamName.c_str());
       // if the exit was clean, don't restart it
-      int exitCode = WEXITSTATUS(status);
-      if (WIFEXITED(status) && (exitCode == 0 || exitCode == 1)){
+      if (WIFEXITED(status) && (WEXITSTATUS(status) == 0 || WEXITSTATUS(status) == 1)){
         HIGH_MSG("Input for stream %s shut down cleanly", streamName.c_str());
         break;
       }
@@ -814,6 +813,21 @@ namespace Mist{
       doInputAbortTrigger(getpid(), Util::mRExitReason, Util::exitReason);
     }
     return returnCode;
+  }
+
+  /// \brief Checks if we should abort for a unsupported track
+  /// \return false if further processing should be aborted
+  bool Input::onUnsupportedTrack(std::string trackType){
+    if (Triggers::shouldTrigger("INPUT_RECOVERABLE", streamName)){
+      std::string payload;
+      std::ostringstream pidString;
+      pidString << getpid();
+      payload = streamName + "\n" + config->getString("input") + "\n" \
+        + "MistIn" + capa["name"].asString() + "\n" + pidString.str() + "\n" \
+        + ER_UNSUPPORTED + "\n" + "Unsupported track type: " + trackType;
+      return Triggers::doTrigger("INPUT_RECOVERABLE", payload, streamName);
+    }
+    return true;
   }
 
   /// Checks in the server configuration if this stream is set to always on or not.

@@ -301,7 +301,12 @@ namespace Mist{
       std::string sType = sEntryBox.getType();
 
       if (!(sType == "avc1" || sType == "h264" || sType == "mp4v" || sType == "hev1" || sType == "hvc1" || sType == "mp4a" || sType == "aac " || sType == "ac-3" || sType == "tx3g" || sType == "av01")){
-        INFO_MSG("Unsupported track type: %s", sType.c_str());
+        if (onUnsupportedTrack(sType)){
+          WARN_MSG("Skipping unsupported track type: %s", sType.c_str());
+        }else{
+          Util::logExitReason(ER_TRIGGER, "Trigger abort; unsupported track type: %s", sType.c_str());
+          return false;
+        }
         continue;
       }
 
