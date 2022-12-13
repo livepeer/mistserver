@@ -180,7 +180,12 @@ namespace Mist{
     bool parsedInitial = false;
     for (std::deque<MP4::TrackHeader>::iterator it = trackHeaders.begin(); it != trackHeaders.end(); it++){
       if (!it->compatible()){
-        INFO_MSG("Unsupported track: %s", it->trackType.c_str());
+        if (onUnsupportedTrack(it->trackType)){
+          INFO_MSG("Skipping unsupported track type: %s", it->trackType.c_str());
+        }else{
+          Util::logExitReason(ER_TRIGGER, "Trigger abort; unsupported track type: %s", it->trackType.c_str());
+          return false;
+        }
         continue;
       }
       tNumber = meta.addTrack();

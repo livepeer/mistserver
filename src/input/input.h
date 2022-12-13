@@ -104,6 +104,7 @@ namespace Mist{
     void doInputAbortTrigger(pid_t pid, char *mRExitReason, char *exitReason);
     bool exitAndLogReason();
     bool canCancelUnload;
+    bool onUnsupportedTrack(std::string trackType);
 
     uint64_t activityCounter;
 
