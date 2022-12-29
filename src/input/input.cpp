@@ -449,7 +449,7 @@ namespace Mist{
       }
       HIGH_MSG("Done waiting for child for stream %s", streamName.c_str());
       // if the exit was clean, don't restart it
-      if (WIFEXITED(status) && (WEXITSTATUS(status) == 0)){
+      if (WIFEXITED(status) && (WEXITSTATUS(status) == 0 || WEXITSTATUS(status) == 1)){
         HIGH_MSG("Input for stream %s shut down cleanly", streamName.c_str());
         break;
       }
@@ -809,7 +809,7 @@ namespace Mist{
     meta.reInit(streamName, false);
 
     if (!openStreamSource()){
-      FAIL_MSG("Unable to connect to source");
+      Util::logExitReason(ER_READ_START_FAILURE, "Unable to connect to source");
       return;
     }
     parseStreamHeader();
@@ -817,9 +817,9 @@ namespace Mist{
     if (publishesTracks()){
       std::set<size_t> validTracks = M.getMySourceTracks(getpid());
       if (!validTracks.size()){
+        Util::logExitReason(ER_CLEAN_EOF, "No tracks found, cancelling pull");
         userSelect.clear();
         finish();
-        INFO_MSG("No tracks found, cancelling");
         return;
       }
     }
