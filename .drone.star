@@ -189,6 +189,26 @@ def binaries_pipeline(context, platform):
         "cd $CI_PATH/srt/build/ && cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=$CI_PATH/compiled -DCMAKE_PREFIX_PATH=$CI_PATH/compiled -DUSE_ENCLIB=mbedtls -DENABLE_SHARED=false .. && make -j $(nproc) install",
     ]
 
+    build_commands = [
+        'export CI_PATH="$(realpath ..)"',
+        'export PKG_CONFIG_PATH="$CI_PATH/compiled/lib/pkgconfig" && export LD_LIBRARY_PATH="$CI_PATH/compiled/lib" && export C_INCLUDE_PATH="$CI_PATH/compiled/include"',
+        "mkdir -p build/ && echo {} | tee build/BUILD_VERSION".format(
+            version,
+        ),
+    ]
+    if platform["os"] == "darwin":
+        # use meson
+        build_commands += [
+            "meson setup build",
+            "cd build && ninja",
+        ]
+    else:
+        # use cmake
+        build_commands += [
+            'cd build && cmake -DDEBUG=3 -DPERPETUAL=1 -DLOAD_BALANCE=1 -DNOLLHLS=1 -DCMAKE_INSTALL_PREFIX="$CI_PATH" -DCMAKE_PREFIX_PATH="$CI_PATH/compiled" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DNORIST=yes -DNOLLHLS=1 ..',
+            "make -j $(nproc) && make install",
+        ]
+
     return {
         "kind": "pipeline",
         "name": "build-%s-%s" % (platform["os"], platform["arch"]),
@@ -211,15 +231,7 @@ def binaries_pipeline(context, platform):
             },
             {
                 "name": "binaries",
-                "commands": [
-                    'export CI_PATH="$(realpath ..)"',
-                    'export PKG_CONFIG_PATH="$CI_PATH/compiled/lib/pkgconfig" && export LD_LIBRARY_PATH="$CI_PATH/compiled/lib" && export C_INCLUDE_PATH="$CI_PATH/compiled/include"',
-                    "mkdir -p build/ && echo {} | tee build/BUILD_VERSION".format(
-                        version,
-                    ),
-                    'cd build && cmake -DDEBUG=3 -DPERPETUAL=1 -DLOAD_BALANCE=1 -DNOLLHLS=1 -DCMAKE_INSTALL_PREFIX="$CI_PATH" -DCMAKE_PREFIX_PATH="$CI_PATH/compiled" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DNORIST=yes -DNOLLHLS=1 ..',
-                    "make -j $(nproc) && make install",
-                ],
+                "commands": build_commands,
             },
             {
                 "name": "compress",
