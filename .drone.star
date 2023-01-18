@@ -200,7 +200,7 @@ def binaries_pipeline(context, platform):
         # use meson
         build_commands += [
             "meson setup build",
-            "cd build && ninja",
+            "cd build && ninja && ninja install",
         ]
     else:
         # use cmake
