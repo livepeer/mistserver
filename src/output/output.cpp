@@ -1435,37 +1435,7 @@ namespace Mist{
           // implementation requires us to keep a single connection to the playlist open
           maxEntries = 0;
           targetAge = 0;
-          // Check if there is an existing playlist at the target location
-          HTTP::URIReader outFile;
-          outFile.setQuiet(true);
-          outFile.open(playlistLocationString);
-          if (outFile){
-            // If so, init the buffer with remote data
-            if (targetParams.count("append")){
-              char *dataPtr;
-              size_t dataLen;
-              outFile.readAll(dataPtr, dataLen);
-              std::string existingBuffer(dataPtr, dataLen);
-              std::istringstream inFile(existingBuffer);
-              std::string line;
-              while (std::getline(inFile, line)) {
-                if (strncmp("#EXTINF", line.c_str(), 7) == 0){
-                  segmentCount++;
-                }else if (strcmp("#EXT-X-ENDLIST", line.c_str()) == 0){
-                  INFO_MSG("Stripping line `#EXT-X-ENDLIST`");
-                  continue;
-                }
-                playlistBuffer += line + '\n';
-              }
-              playlistBuffer += "#EXT-X-DISCONTINUITY\n";
-              INFO_MSG("Found %lu prior segments", segmentCount);
-              INFO_MSG("Appending to existing remote playlist file '%s'", playlistLocationString.c_str());
-            }else{
-              WARN_MSG("Overwriting existing remote playlist file '%s'", playlistLocationString.c_str());
-            }
-          }else{
-            INFO_MSG("Creating new remote playlist file '%s'", playlistLocationString.c_str());
-          }
+          INFO_MSG("Creating new remote playlist file '%s'", playlistLocationString.c_str());
         }
       }
       // By default split into a new segment after 60 seconds
