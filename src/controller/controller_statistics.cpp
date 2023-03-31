@@ -108,6 +108,8 @@ struct streamTotals{
   uint64_t currUnspecified;
   uint64_t currSessions;
   uint8_t status;
+  uint8_t statusPerc;
+  uint8_t statusLive;
   uint64_t viewSeconds;
   uint64_t packSent;
   uint64_t packLoss;
@@ -151,6 +153,8 @@ static void createEmptyStatsIfNeeded(const std::string & streamName){
   sT.currSessions = 0;
   sT.currViews = 0;
   sT.status = 0;
+  sT.statusPerc = 0;
+  sT.statusLive = 0;
   sT.viewSeconds = 0;
   sT.packSent = 0;
   sT.packLoss = 0;
@@ -602,12 +606,18 @@ void Controller::SharedMemStats(Util::Config * config){
       }
       std::set<std::string> inactiveStreams;
       if (streamStats.size()){
+        IPC::sharedPage streamStatus;
+        char pageName[NAME_BUFFER_SIZE];
         for (std::map<std::string, struct streamTotals>::iterator it = streamStats.begin();
              it != streamStats.end(); ++it){
           // Ignore blank stream name; these are generic and we don't track stream status for them
           if (it->first.size()){
-            uint8_t newState = Util::getStreamStatus(it->first);
+            snprintf(pageName, NAME_BUFFER_SIZE, SHM_STREAM_STATE, it->first.c_str());
+            streamStatus.init(pageName, STRMSTAT_LEN, false, false);
+            uint8_t newState = streamStatus?streamStatus.mapped[0]:STRMSTAT_OFF;
             uint8_t oldState = it->second.status;
+            it->second.statusPerc = (streamStatus && streamStatus.len > 1)?streamStatus.mapped[1]:0;
+            it->second.statusLive = (streamStatus && streamStatus.len > 2)?streamStatus.mapped[2]:0;
             if (newState != oldState){
               it->second.status = newState;
               if (newState == STRMSTAT_READY){
@@ -2033,6 +2043,7 @@ void Controller::handlePrometheus(HTTP::Parser &H, Socket::Connection &conn, int
       response << "# TYPE mist_bw counter\n";
       response << "# HELP mist_packets Total number of packets sent/received/lost over lossy protocols.\n";
       response << "# TYPE mist_packets counter\n";
+      size_t healthStreams = 0, unHealthStreams = 0;
       for (std::map<std::string, struct streamTotals>::iterator it = streamStats.begin();
             it != streamStats.end(); ++it){
         response << "mist_sessions{stream=\"" << it->first << "\",sessType=\"viewers\"}"
@@ -2050,6 +2061,17 @@ void Controller::handlePrometheus(HTTP::Parser &H, Socket::Connection &conn, int
         response << "mist_packets{stream=\"" << it->first << "\",pkttype=\"sent\"}" << it->second.packSent << "\n";
         response << "mist_packets{stream=\"" << it->first << "\",pkttype=\"lost\"}" << it->second.packLoss << "\n";
         response << "mist_packets{stream=\"" << it->first << "\",pkttype=\"retrans\"}" << it->second.packRetrans << "\n";
+        //Only output stream health if status is ready
+        if (it->second.status == STRMSTAT_READY && it->second.statusLive == 1){
+          response << "mist_health{stream=\"" << it->first << "\"}" << (int)it->second.statusPerc << "\n";
+          if (it->second.statusPerc){
+            ++unHealthStreams;
+          }else{
+            ++healthStreams;
+          }
+        }
+        response << "mist_health_count{health=\"good\"}" << healthStreams << "\n";
+        response << "mist_health_count{health=\"bad\"}" << unHealthStreams << "\n";
       }
 
       if (Controller::triggerStats.size()){
