@@ -467,8 +467,8 @@ namespace Mist{
         //Set stream status to STRMSTAT_INIT, then close the page in non-master mode to keep it around
         char pageName[NAME_BUFFER_SIZE];
         snprintf(pageName, NAME_BUFFER_SIZE, SHM_STREAM_STATE, streamName.c_str());
-        streamStatus.init(pageName, 2, false, false);
-        if (!streamStatus){streamStatus.init(pageName, 2, true, false);}
+        streamStatus.init(pageName, STRMSTAT_LEN, false, false);
+        if (!streamStatus){streamStatus.init(pageName, STRMSTAT_LEN, true, false);}
         if (streamStatus){streamStatus.mapped[0] = STRMSTAT_INIT;}
         streamStatus.master = false;
         streamStatus.close();
@@ -515,8 +515,8 @@ namespace Mist{
         // Re-init streamStatus, previously closed
         char pageName[NAME_BUFFER_SIZE];
         snprintf(pageName, NAME_BUFFER_SIZE, SHM_STREAM_STATE, streamName.c_str());
-        streamStatus.init(pageName, 2, false, false);
-        if (!streamStatus){streamStatus.init(pageName, 2, true, false);}
+        streamStatus.init(pageName, STRMSTAT_LEN, false, false);
+        if (!streamStatus){streamStatus.init(pageName, STRMSTAT_LEN, true, false);}
         streamStatus.master = false;
         if (streamStatus){streamStatus.mapped[0] = STRMSTAT_INIT;}
       }
@@ -530,7 +530,7 @@ namespace Mist{
         playerLock.unlink();
         char pageName[NAME_BUFFER_SIZE];
         snprintf(pageName, NAME_BUFFER_SIZE, SHM_STREAM_STATE, streamName.c_str());
-        streamStatus.init(pageName, 2, false, false);
+        streamStatus.init(pageName, STRMSTAT_LEN, false, false);
         if (streamStatus){
           streamStatus.master = true;
           streamStatus.close();
@@ -554,8 +554,8 @@ namespace Mist{
           // Re-init streamStatus, previously closed
           char pageName[NAME_BUFFER_SIZE];
           snprintf(pageName, NAME_BUFFER_SIZE, SHM_STREAM_STATE, streamName.c_str());
-          streamStatus.init(pageName, 2, false, false);
-          if (!streamStatus){streamStatus.init(pageName, 2, true, false);}
+          streamStatus.init(pageName, STRMSTAT_LEN, false, false);
+          if (!streamStatus){streamStatus.init(pageName, STRMSTAT_LEN, true, false);}
           streamStatus.master = false;
           if (streamStatus){streamStatus.mapped[0] = STRMSTAT_INIT;}
         }
@@ -595,7 +595,7 @@ namespace Mist{
       if (playerLock){
         char pageName[NAME_BUFFER_SIZE];
         snprintf(pageName, NAME_BUFFER_SIZE, SHM_STREAM_STATE, streamName.c_str());
-        streamStatus.init(pageName, 2, false, false);
+        streamStatus.init(pageName, STRMSTAT_LEN, false, false);
         if (streamStatus){streamStatus.mapped[0] = STRMSTAT_INVALID;}
       }
       // Fire the INPUT_ABORT trigger if the child process ends with an abnormal exit code
@@ -665,7 +665,7 @@ namespace Mist{
       }
       //Clear stream state
       snprintf(pageName, NAME_BUFFER_SIZE, SHM_STREAM_STATE, streamName.c_str());
-      streamStatus.init(pageName, 2, false, false);
+      streamStatus.init(pageName, STRMSTAT_LEN, false, false);
       if (streamStatus){
         streamStatus.master = true;
         streamStatus.close();

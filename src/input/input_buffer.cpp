@@ -236,6 +236,16 @@ namespace Mist{
       if (fragCount >= FRAG_BOOT && fragCount != 0xFFFFull){
         JSON::Value stream_details;
         M.getHealthJSON(stream_details);
+        // If we have a streamStatus of 3+ bytes, write the type of stream and issue count
+        if (streamStatus && streamStatus.len > 2){
+          if (stream_details.isMember("human_issues") && stream_details["human_issues"].size()){
+            streamStatus.mapped[1] = stream_details["human_issues"].size();
+            streamStatus.mapped[2] = 1;
+          }else{
+            streamStatus.mapped[1] = 0;
+            streamStatus.mapped[2] = 1;
+          }
+        }
         if ((lastFragCount == 0xFFFFull || stream_details.isMember("issues") != wentDry) && Triggers::shouldTrigger("STREAM_BUFFER", streamName)){
           if (lastFragCount == 0xFFFFull){
             std::string payload = streamName + "\nFULL\n" + stream_details.toString();
@@ -249,9 +259,9 @@ namespace Mist{
               Triggers::doTrigger("STREAM_BUFFER", payload, streamName);
             }
           }
+          wentDry = stream_details.isMember("issues");
+          lastFragCount = fragCount;
         }
-        wentDry = stream_details.isMember("issues");
-        lastFragCount = fragCount;
       }
     }
     /*LTS-END*/
