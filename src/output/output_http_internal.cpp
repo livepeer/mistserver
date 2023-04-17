@@ -1194,18 +1194,21 @@ namespace Mist{
     if (!useragent.size()){useragent = req.GetHeader("User-Agent");}
     std::string upgradeHeader = req.GetHeader("Upgrade");
 
+    std::string country, timezone, region, subregion;
     double lat = 0;
     double lon = 0;
-    if (H.GetVar("lat") != ""){
-      lat = atof(H.GetVar("lat").c_str());
-      H.SetVar("lat", "");
+    if (req.GetVar("lat") != ""){
+      lat = atof(req.GetVar("lat").c_str());
     }
-    if (H.GetVar("lon") != ""){
-      lon = atof(H.GetVar("lon").c_str());
-      H.SetVar("lon", "");
+    if (req.GetVar("lon") != ""){
+      lon = atof(req.GetVar("lon").c_str());
     }
-    if (H.hasHeader("X-Latitude")){lat = atof(H.GetHeader("X-Latitude").c_str());}
-    if (H.hasHeader("X-Longitude")){lon = atof(H.GetHeader("X-Longitude").c_str());}
+    if (req.hasHeader("X-Latitude")){lat = atof(req.GetHeader("X-Latitude").c_str());}
+    if (req.hasHeader("X-Longitude")){lon = atof(req.GetHeader("X-Longitude").c_str());}
+    if (req.hasHeader("X-City-Country-Code")){country = req.GetHeader("X-City-Country-Code");}
+    if (req.hasHeader("X-Time-Zone")){timezone = req.GetHeader("X-Time-Zone");}
+    if (req.hasHeader("X-Region-Code")){region = req.GetHeader("X-Region-Code");}
+    if (req.hasHeader("X-Subregion-Code")){subregion = req.GetHeader("X-Subregion-Code");}
 
     Util::stringToLower(upgradeHeader);
     if (upgradeHeader != "websocket"){return false;}
@@ -1455,6 +1458,11 @@ namespace Mist{
     playLog["ttff"] = ttff;
     playLog["uid"] = uid;
     playLog["preload_time"] = preloadTime;
+    if (lat || lon){playLog["geo"]["hash"] = geohash(lat, lon);}
+    if (country.size()){playLog["geo"]["cc"] = country;}
+    if (timezone.size()){playLog["geo"]["tz"] = timezone;}
+    if (region.size()){playLog["geo"]["reg"] = region;}
+    if (subregion.size()){playLog["geo"]["subreg"] = subregion;}
     if (statWaitsAdj || statWaitTimeAdj || statStallsAdj || statStallTimeAdj || statPlaytimeAdj || statErrorsAdj || statLogsAdj || preloadTimeAdj){
       playLog["log_type"] = "adj-playback-log";
       playLog["waits_adj"] = statWaitsAdj;
