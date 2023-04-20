@@ -608,6 +608,19 @@ namespace Mist{
     }
 
     if (!meta){return true;}//abort the rest if we can't write metadata
+
+    // No UUID yet? Generate one.
+    if (!meta.getUUID().size()){
+      std::string uuid = Util::generateUUID();
+      Util::setUUID(uuid);
+      if (Triggers::shouldTrigger("UUID_GENERATE", streamName)){
+        std::string payload = uuid + "\n" + streamName + "\n" + config->getString("input");
+        std::string newUUID;
+        if (Triggers::doTrigger("UUID_GENERATE", payload, streamName, false, newUUID) && newUUID.size()){uuid = newUUID;}
+      }
+      meta.setUUID(uuid);
+    }
+
     lastReTime = Util::epoch(); /*LTS*/
 
     //Check if resume setting is correct
