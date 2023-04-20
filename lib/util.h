@@ -30,6 +30,7 @@ namespace Util{
   bool sysSetNrOpenFiles(int n);
 
   size_t pixfmtToSize(const std::string & pixfmt, size_t width, size_t height);
+  unsigned long mix(unsigned long a, unsigned long b, unsigned long c);
 
   class DataCallback{
   public:
