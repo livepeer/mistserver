@@ -1543,7 +1543,9 @@ namespace Mist{
       }else{
         tmpTarget = origTarget;
       }
-      if (tmpTarget.find("$currentMediaTime") == std::string::npos && tmpTarget.find("$segmentCounter") == std::string::npos){
+      if (tmpTarget.find("$currentMediaTime") == std::string::npos && tmpTarget.find("$segmentCounter") == std::string::npos &&
+          tmpTarget.find("${currentMediaTime}") == std::string::npos && tmpTarget.find("${segmentCounter}") == std::string::npos
+         ){
         FAIL_MSG("Target segmented output does not contain a currentMediaTime or segmentCounter: %s", tmpTarget.c_str());
         Util::logExitReason("Target segmented output does not contain a currentMediaTime or segmentCounter: %s", tmpTarget.c_str());
         return 1;
@@ -1561,6 +1563,11 @@ namespace Mist{
     if (targetParams.count("noendlist")){
       addEndlist = false;
     }
+    Comms::sessionConfigCache();
+    if (isFileTarget()){
+      isRecordingToFile = true;
+      initialize();
+    }
     // When segmenting to a playlist, handle any existing files and init some data
     if (targetParams.count("m3u8")){
       // Load system boot time from the global config
@@ -1572,6 +1579,12 @@ namespace Mist{
         std::string plsRel = targetParams["m3u8"];
         Util::streamVariables(plsRel, streamName);
         playlistLocation = HTTP::localURIResolver().link(config->getString("target")).link(plsRel);
+        { // Update playlist location with UUID replaced
+          std::string plsStr = playlistLocation.getUrl();
+          Util::streamVariables(plsStr, streamName);
+          Util::replaceVar(plsStr, "uuid", Util::UUID);
+          playlistLocation = HTTP::URL(plsStr);
+        }
         if (playlistLocation.isLocalPath()){
           playlistLocationString = playlistLocation.getFilePath();
           INFO_MSG("Segmenting to local playlist '%s'", playlistLocationString.c_str());
@@ -1662,18 +1675,14 @@ namespace Mist{
       }
       targetDuration = targetParams["split"];
     }
-    Comms::sessionConfigCache();
-    /*LTS-START*/
     // Connect to file target, if needed
     if (isFileTarget()){
-      isRecordingToFile = true;
       if (!streamName.size()){
         WARN_MSG("Recording unconnected %s output to file! Cancelled.", capa["name"].asString().c_str());
         onFail("Unconnected recording output", true);
         recEndTrigger();
         return 2;
       }
-      initialize();
       if (!M.getValidTracks().size() || !userSelect.size() || !keepGoing()){
         INFO_MSG("Stream not available - aborting");
         onFail("Stream not available for recording", true);
@@ -1705,8 +1714,9 @@ namespace Mist{
       }
       currentStartTime = currentTime();
       std::string newTarget = origTarget;
-      Util::replace(newTarget, "$currentMediaTime", JSON::Value(currentStartTime).asString());
-      Util::replace(newTarget, "$segmentCounter", JSON::Value(segmentCount).asString());
+      Util::replaceVar(newTarget, "currentMediaTime", JSON::Value(currentStartTime).asString());
+      Util::replaceVar(newTarget, "segmentCounter", JSON::Value(segmentCount).asString());
+      Util::replaceVar(newTarget, "uuid", Util::UUID);
       Util::streamVariables(newTarget, streamName);
       currentTarget = newTarget;
       if (newTarget == "-"){
@@ -1904,8 +1914,9 @@ namespace Mist{
                 }
                 currentStartTime = lastPacketTime;
                 segmentCount++;
-                Util::replace(newTarget, "$currentMediaTime", JSON::Value(currentStartTime).asString());
-                Util::replace(newTarget, "$segmentCounter", JSON::Value(segmentCount).asString());
+                Util::replaceVar(newTarget, "currentMediaTime", JSON::Value(currentStartTime).asString());
+                Util::replaceVar(newTarget, "segmentCounter", JSON::Value(segmentCount).asString());
+                Util::replaceVar(newTarget, "uuid", Util::UUID);
                 Util::streamVariables(newTarget, streamName);
                 if (newTarget.rfind('?') != std::string::npos){
                   newTarget.erase(newTarget.rfind('?'));
