@@ -2,6 +2,7 @@
 /// Holds all code for DDVTECH Stream Container parsing/generation.
 
 #include "bitfields.h"
+#include "config.h"
 #include "defines.h"
 #include "dtsc.h"
 #include "encode.h"
@@ -984,6 +985,7 @@ namespace DTSC{
 
     setVod(src.hasMember("vod") && src.getMember("vod").asInt());
     setLive(src.hasMember("live") && src.getMember("live").asInt());
+    setUUID(src.hasMember("uuid") ? src.getMember("uuid").asString() : "");
 
     version = src.getMember("version").asInt();
 
@@ -1177,6 +1179,7 @@ namespace DTSC{
       stream.addField("live", RAX_UINT);
       stream.addField("tracks", RAX_NESTED, META_TRACK_OFFSET + (trackCount * META_TRACK_RECORDSIZE));
       stream.addField("source", RAX_STRING, 512);
+      stream.addField("uuid", RAX_STRING, 64);
       stream.addField("maxkeepaway", RAX_16UINT);
       stream.addField("resume", RAX_UINT);
       stream.addField("bufferwindow", RAX_64UINT);
@@ -1321,6 +1324,7 @@ namespace DTSC{
       INFO_MSG("No track pointer, not refreshing.");
       return;
     }
+    Util::setUUID(getUUID());
     trackList = Util::RelAccX(stream.getPointer(streamTracksField), false);
     preloadTrackFields();
     for (size_t i = 0; i < trackList.getPresent(); i++){
@@ -1928,7 +1932,7 @@ namespace DTSC{
     }
     trackList.setInt(trackPidField, getpid(), trackIdx);
   }
-  
+
   void Meta::abandonTrack(size_t trackIdx){
     if (trackList.getInt(trackPidField, trackIdx) != getpid()){
       FAIL_MSG("Cannot abandon track: is claimed by PID %" PRIu64 ", not us", trackList.getInt(trackPidField, trackIdx));
@@ -2361,6 +2365,16 @@ namespace DTSC{
   bool Meta::getLive() const{
     return (!isLimited || limitMax == 0xFFFFFFFFFFFFFFFFull) && stream.getInt(streamLiveField);
   }
+
+  void Meta::setUUID(std::string uuid){
+    stream.setString("uuid", uuid);
+    Util::setUUID(uuid);
+  }
+
+  std::string Meta::getUUID() const{
+    return stream.getPointer("uuid");
+  }
+
 
   void Meta::setTrackExtraJSON(size_t trackIdx, const JSON::Value & val){
     DTSC::Track &t = tracks.at(trackIdx);
@@ -3022,6 +3036,7 @@ namespace DTSC{
       dataLen += 13 + sourceURI.size();
     }
     */
+    if (getUUID().size()){dataLen += 11 + getUUID().size();}
     return dataLen + 8; // add 8 bytes header
   }
 
@@ -3117,6 +3132,7 @@ namespace DTSC{
     }else{
       res["vod"] = 1u;
     }
+    if (getUUID().size()){res["uuid"] = getUUID();}
     res["version"] = DTSH_VERSION;
     if (getBufferWindow()){res["buffer_window"] = getBufferWindow();}
     if (getSource() != ""){res["source"] = getSource();}
@@ -3162,6 +3178,11 @@ namespace DTSC{
       conn.SendNow("\000\016inputLocalVars\002", 17);
       conn.SendNow(c32(lVars.size()), 4);
       conn.SendNow(lVars.data(), lVars.size());
+    }
+    if (getUUID().size()){
+      conn.SendNow("\000\004uuid\002", 7);
+      conn.SendNow(c32(getUUID().size()), 4);
+      conn.SendNow(getUUID().data(), getUUID().size());
     }
     conn.SendNow("\000\006tracks\340", 9);
     for (std::set<size_t>::const_iterator it = selectedTracks.begin(); it != selectedTracks.end(); it++){

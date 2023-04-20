@@ -24,6 +24,7 @@
 #include "timing.h"
 #include "triggers.h"
 #include "util.h"
+#include "config.h"
 #include "json.h"
 #include "stream.h"
 #include <string.h> //for strncmp
@@ -72,6 +73,7 @@ namespace Triggers{
       DL.setHeader("X-Trigger-UUID", getenv("MIST_TUUID"));
       DL.setHeader("X-Trigger-UnixMillis", getenv("MIST_TIME"));
       DL.setHeader("Date", getenv("MIST_DATE"));
+      if (Util::UUID[0]){DL.setHeader("X-UUID", Util::UUID);}
       DL.setHeader("Content-Type", "text/plain");
       HTTP::URL url(value);
       if (DL.post(url, payload, sync) && (!sync || DL.isOk())){
@@ -102,11 +104,13 @@ namespace Triggers{
       if (hrn.size()){
         setenv("MIST_NAME", hrn.c_str(), 1);
       }
+      setenv("MIST_UUID", Util::UUID, 1);
       pid_t myProc = Util::Procs::StartPiped(argv, &fdIn, &fdOut, &fdErr); // start new process and return stdin file desc.
       unsetenv("MIST_TRIGGER");
       unsetenv("MIST_TRIG_DEF");
       unsetenv("MIST_INSTANCE");
       unsetenv("MIST_NAME");
+      unsetenv("MIST_UUID");
       if (fdIn == -1 || fdOut == -1 || myProc == -1){
         FAIL_MSG("Could not execute trigger executable: %s", strerror(errno));
         submitTriggerStat(trigger, tStartMs, false);
