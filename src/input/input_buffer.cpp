@@ -263,6 +263,11 @@ namespace Mist{
     finalMillis = lastms;
     meta.setBufferWindow(lastms - firstms);
     meta.setLive(true);
+    static uint64_t lastBootMsOffset = 0;
+    if (lastBootMsOffset != M.getBootMsOffset() || (!lastBootMsOffset && !M.getUTCOffset())){
+      lastBootMsOffset = M.getBootMsOffset();
+      meta.setUTCOffset(lastBootMsOffset + Util::getGlobalConfig("systemBoot").asInt());
+    }
   }
 
   /// Checks if removing a key from this track is allowed/safe, and if so, removes it.
