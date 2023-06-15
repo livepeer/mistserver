@@ -268,6 +268,11 @@ namespace Mist{
     finalMillis = lastms;
     meta.setBufferWindow(lastms - firstms);
     meta.setLive(true);
+    static uint64_t lastBootMsOffset = 0;
+    if (lastBootMsOffset != M.getBootMsOffset() || (!lastBootMsOffset && !M.getUTCOffset())){
+      lastBootMsOffset = M.getBootMsOffset();
+      meta.setUTCOffset(lastBootMsOffset + Util::getGlobalConfig("systemBoot").asInt());
+    }
   }
 
   bool InputBuffer::keepRunning(bool updateActCtr){
