@@ -1227,7 +1227,7 @@ void Controller::handleAPICommands(JSON::Value &Request, JSON::Value &Response){
 
   if (Request.isMember("external_writer_remove")){Controller::removeExternalWriter(Request["external_writer_remove"]);}
   if (Request.isMember("external_writer_add")){Controller::addExternalWriter(Request["external_writer_add"]);}
-  if (Request.isMember("external_writer_remove") || Request.isMember("external_writer_add") || 
+  if (Request.isMember("external_writer_remove") || Request.isMember("external_writer_add") ||
       Request.isMember("external_writer_list")){
     Controller::listExternalWriters(Response["external_writer_list"]);
   }
