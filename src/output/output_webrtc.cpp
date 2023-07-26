@@ -66,7 +66,7 @@ namespace Mist{
     ((OutWebRTC*)addr)->sendSCTPPacket((const char*)buf, length);
     return 0;
   }
-  
+
   void sctp_debug_cb(const char * format, ...){
     char msg[1024];
     va_list args;
@@ -96,7 +96,7 @@ namespace Mist{
       udpSock->sendPaced(dataBuffer, rtcpPacketSize, false);
       return rtcpPacketSize;
     }
-    
+
     udpSock->sendPaced(data, len, false);
 
     if (volkswagenMode){
@@ -178,7 +178,7 @@ namespace Mist{
     udpPort = 0;
     Util::getRandomBytes(&SSRC, sizeof(SSRC));
     rtcpTimeoutInMillis = 0;
-    rtcpKeyFrameDelayInMillis = 1000;
+    rtcpKeyFrameDelayInMillis = 2000;
     rtcpKeyFrameTimeoutInMillis = 0;
     videoBitrate = 4 * 1000 * 1000;
     videoConstraint = videoBitrate;
@@ -188,7 +188,7 @@ namespace Mist{
     lastMediaSocket = 0;
     lastMetaSocket = 0;
 
-   
+
     JSON::Value & certOpt = config->getOption("cert", true);
     JSON::Value & keyOpt = config->getOption("key", true);
 
@@ -590,7 +590,7 @@ namespace Mist{
       HIGH_MSG("Ignoring non-text websocket frame");
       return;
     }
-    
+
     JSON::Value command = JSON::fromString(webSock->data, webSock->data.size());
     JSON::Value commandResult;
 
@@ -1297,7 +1297,7 @@ namespace Mist{
     //If this is an incoming push, handle receiver reports and keyframe interval
     if (isPushing()){
       uint64_t now = Util::bootMS();
-      
+
       //Receiver reports and packet loss calculations
       if (now >= rtcpTimeoutInMillis){
         std::map<uint64_t, WebRTCTrack>::iterator it;
@@ -1389,13 +1389,13 @@ namespace Mist{
     stun_writer.writeMessageIntegrity(passwordLocal);
     stun_writer.writeFingerprint();
     stun_writer.end();
-    
+
     wSock.udpSock->SendNow((const char *)stun_writer.getBufferPtr(), stun_writer.getBufferSize());
     myConn.addUp(stun_writer.getBufferSize());
   }
 
   void OutWebRTC::ackNACK(uint32_t pSSRC, uint16_t seq){
-    
+
     for (std::set<int>::iterator it = rtpSockets.begin(); it != rtpSockets.end(); ++it){
       if (!*(sockets[*it].udpSock)){continue;}
       size_t sent = sockets[*it].ackNACK(pSSRC, seq);
@@ -1853,7 +1853,7 @@ namespace Mist{
           return;
         }
       }
-      
+
       sockets[*it].udpSock->sendPaced(rtpOutBuffer, (size_t)protectedSize, false);
       myConn.addUp(protectedSize);
       RTP::Packet tmpPkt(rtpOutBuffer, protectedSize);
