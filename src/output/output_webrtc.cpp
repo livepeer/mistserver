@@ -78,7 +78,7 @@ namespace Mist{
     udpPort = 0;
     SSRC = generateSSRC();
     rtcpTimeoutInMillis = 0;
-    rtcpKeyFrameDelayInMillis = 1000;
+    rtcpKeyFrameDelayInMillis = 2000;
     rtcpKeyFrameTimeoutInMillis = 0;
     videoBitrate = 4 * 1000 * 1000;
     videoConstraint = videoBitrate;
@@ -88,7 +88,7 @@ namespace Mist{
     volkswagenMode = false;
     syncedNTPClock = false;
 
-   
+
     JSON::Value & certOpt = config->getOption("cert", true);
     JSON::Value & keyOpt = config->getOption("key", true);
 
@@ -461,7 +461,7 @@ namespace Mist{
       HIGH_MSG("Ignoring non-text websocket frame");
       return;
     }
-    
+
     JSON::Value command = JSON::fromString(webSock->data, webSock->data.size());
     JSON::Value commandResult;
 
@@ -1207,7 +1207,7 @@ namespace Mist{
     //If this is an incoming push, handle receiver reports and keyframe interval
     if (isPushing()){
       uint64_t now = Util::bootMS();
-      
+
       //Receiver reports and packet loss calculations
       if (now >= rtcpTimeoutInMillis){
         std::map<uint64_t, WebRTCTrack>::iterator it;
@@ -1297,7 +1297,7 @@ namespace Mist{
     stun_writer.writeMessageIntegrity(passwordLocal);
     stun_writer.writeFingerprint();
     stun_writer.end();
-    
+
     udp.sendPaced((const char *)stun_writer.getBufferPtr(), stun_writer.getBufferSize());
     myConn.addUp(stun_writer.getBufferSize());
   }
@@ -1657,14 +1657,14 @@ namespace Mist{
     rtpOutBuffer.allocate(nbytes + 256);
     rtpOutBuffer.assign(data, nbytes);
     int rtcpPacketSize = nbytes;
-    
+
     if (doDTLS){
       if (srtpWriter.protectRtcp((uint8_t *)(void *)rtpOutBuffer, &rtcpPacketSize) != 0){
         ERROR_MSG("Failed to protect the RTCP message.");
         return;
       }
     }
-    
+
     udp.sendPaced(rtpOutBuffer, rtcpPacketSize);
     myConn.addUp(rtcpPacketSize);
 
@@ -1674,7 +1674,7 @@ namespace Mist{
         return;
       }
     }
-    
+
   }
 
   // This function was implemented (it's virtual) to handle
@@ -1907,7 +1907,7 @@ namespace Mist{
         return;
       }
     }
-    
+
     udp.sendPaced((const char *)&buffer[0], buffer_size_in_bytes);
     myConn.addUp(buffer_size_in_bytes);
 
@@ -1999,7 +1999,7 @@ namespace Mist{
         return;
       }
     }
-    
+
     udp.sendPaced((const char *)&buffer[0], buffer_size_in_bytes);
     myConn.addUp(buffer_size_in_bytes);
 
