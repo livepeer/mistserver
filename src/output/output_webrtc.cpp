@@ -313,10 +313,7 @@ namespace Mist{
 
   void OutWebRTC::requestHandler(){
     if (noSignalling){
-      if (!parseData){
-        tthread::lock_guard<tthread::mutex> guard(sendMutex);
-        udp.sendPaced(10000);
-      }
+      if (!parseData){udp.sendPaced(10000);}
       //After 10s of no packets, abort
       if (Util::bootMS() > lastRecv + 10000){
         Util::logExitReason(ER_CLEAN_INACTIVE, "received no data for 10+ seconds");
@@ -1165,10 +1162,7 @@ namespace Mist{
   void OutWebRTC::handleWebRTCInputOutputFromThread(){
     udp.allocateDestination();
     while (keepGoing()){
-      if (!handleWebRTCInputOutput()){
-        tthread::lock_guard<tthread::mutex> guard(sendMutex);
-        udp.sendPaced(10);
-      }
+      if (!handleWebRTCInputOutput()){udp.sendPaced(10);}
     }
   }
 
@@ -1304,10 +1298,7 @@ namespace Mist{
     stun_writer.writeFingerprint();
     stun_writer.end();
 
-    {
-      tthread::lock_guard<tthread::mutex> guard(sendMutex);
-      udp.sendPaced((const char *)stun_writer.getBufferPtr(), stun_writer.getBufferSize());
-    }
+    udp.sendPaced((const char *)stun_writer.getBufferPtr(), stun_writer.getBufferSize());
     myConn.addUp(stun_writer.getBufferSize());
   }
 
@@ -1352,10 +1343,7 @@ namespace Mist{
       HIGH_MSG("Could not answer NACK for %" PRIu32 " #%" PRIu16 ": packet not buffered", pSSRC, seq);
       return;
     }
-    {
-      tthread::lock_guard<tthread::mutex> guard(sendMutex);
-      udp.sendPaced(nb.getData(seq), nb.getSize(seq));
-    }
+    udp.sendPaced(nb.getData(seq), nb.getSize(seq));
     myConn.addUp(nb.getSize(seq));
     HIGH_MSG("Answered NACK for %" PRIu32 " #%" PRIu16, pSSRC, seq);
   }
@@ -1543,7 +1531,6 @@ namespace Mist{
   /* ------------------------------------------------ */
 
   int OutWebRTC::onDTLSHandshakeWantsToWrite(const uint8_t *data, int *nbytes){
-    tthread::lock_guard<tthread::mutex> guard(sendMutex);
     udp.sendPaced((const char *)data, (size_t)*nbytes);
     myConn.addUp(*nbytes);
     return 0;
@@ -1639,10 +1626,7 @@ namespace Mist{
         return;
       }
     }
-    {
-      tthread::lock_guard<tthread::mutex> guard(sendMutex);
-      udp.sendPaced(rtpOutBuffer, (size_t)protectedSize);
-    }
+    udp.sendPaced(rtpOutBuffer, (size_t)protectedSize);
 
     RTP::Packet tmpPkt(rtpOutBuffer, protectedSize);
     uint32_t pSSRC = tmpPkt.getSSRC();
@@ -1681,10 +1665,7 @@ namespace Mist{
       }
     }
 
-    {
-      tthread::lock_guard<tthread::mutex> guard(sendMutex);
-      udp.sendPaced(rtpOutBuffer, rtcpPacketSize);
-    }
+    udp.sendPaced(rtpOutBuffer, rtcpPacketSize);
     myConn.addUp(rtcpPacketSize);
 
     if (volkswagenMode){
@@ -1707,10 +1688,7 @@ namespace Mist{
     // first make sure that we complete the DTLS handshake.
     if(doDTLS){
       while (keepGoing() && !dtlsHandshake.hasKeyingMaterial()){
-        if (!handleWebRTCInputOutput()){
-          tthread::lock_guard<tthread::mutex> guard(sendMutex);
-          udp.sendPaced(10000);
-        }
+        if (!handleWebRTCInputOutput()){udp.sendPaced(10000);}
         if (lastRecv < Util::bootMS() - 10000){
           WARN_MSG("Killing idle connection in handshake phase");
           onFail("idle connection in handshake phase", false);
@@ -1930,10 +1908,7 @@ namespace Mist{
       }
     }
 
-    {
-      tthread::lock_guard<tthread::mutex> guard(sendMutex);
-      udp.sendPaced((const char *)&buffer[0], buffer_size_in_bytes);
-    }
+    udp.sendPaced((const char *)&buffer[0], buffer_size_in_bytes);
     myConn.addUp(buffer_size_in_bytes);
 
     if (volkswagenMode){
@@ -1974,10 +1949,7 @@ namespace Mist{
       }
     }
 
-    {
-      tthread::lock_guard<tthread::mutex> guard(sendMutex);
-      udp.sendPaced((const char *)&buffer[0], buffer_size_in_bytes);
-    }
+    udp.sendPaced((const char *)&buffer[0], buffer_size_in_bytes);
     myConn.addUp(buffer_size_in_bytes);
 
     if (volkswagenMode){
@@ -2028,10 +2000,7 @@ namespace Mist{
       }
     }
 
-    {
-      tthread::lock_guard<tthread::mutex> guard(sendMutex);
-      udp.sendPaced((const char *)&buffer[0], buffer_size_in_bytes);
-    }
+    udp.sendPaced((const char *)&buffer[0], buffer_size_in_bytes);
     myConn.addUp(buffer_size_in_bytes);
 
     if (volkswagenMode){
