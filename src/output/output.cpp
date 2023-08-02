@@ -1671,7 +1671,7 @@ namespace Mist{
                      keepGoing()){
                 amount = thisTime - targetTime();
                 if (amount > 1000){amount = 1000;}
-                idleTime(amount);
+                Util::sleep(amount);
                 //Make sure we stay responsive to requests and stats while waiting
                 if (wantRequest){
                   requestHandler();
