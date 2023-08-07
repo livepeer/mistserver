@@ -9,7 +9,7 @@
 #include <iomanip>
 #include <fstream>
 
-#include "output.h" 
+#include "output.h"
 #include <mist/bitfields.h>
 #include <mist/defines.h>
 #include <mist/h264.h>
@@ -117,6 +117,7 @@ namespace Mist{
     Util::Config::binaryType = Util::OUTPUT;
 
     lastRecv = Util::bootSecs();
+    outputStartMs = Util::bootMS();
     if (myConn){
       setBlocking(true);
       //Make sure that if the socket is a non-stdio socket, we close it when forking
@@ -234,31 +235,59 @@ namespace Mist{
     if (!capa.isMember("codecs") || !capa["codecs"].size() || !capa["codecs"].isArray() || !capa["codecs"][0u].size()){return true;}
     if (!isInitialized){return false;}
     meta.reloadReplacedPagesIfNeeded();
-    if (getSupportedTracks().size()){
-      size_t minTracks = 2;
-      size_t minMs = 5000;
-      if (targetParams.count("waittrackcount")){
-        minTracks = JSON::Value(targetParams["waittrackcount"]).asInt();
-        minMs = 120000;
-      }
-      if (targetParams.count("maxwaittrackms")){
-        minMs = JSON::Value(targetParams["maxwaittrackms"]).asInt();
-      }
-      if (!userSelect.size()){selectDefaultTracks();}
-      size_t mainTrack = getMainSelectedTrack();
-      if (mainTrack != INVALID_TRACK_ID){
-        DTSC::Keys keys(M.keys(mainTrack));
-        if (keys.getValidCount() >= minTracks || M.getNowms(mainTrack) - M.getFirstms(mainTrack) > minMs){
-          return true;
-        }
-        HIGH_MSG("NOT READY YET (%zu tracks, main track: %zu, with %zu keys)",
-                 M.getValidTracks().size(), getMainSelectedTrack(), keys.getValidCount());
-      }else{
-        HIGH_MSG("NOT READY YET (%zu tracks)", getSupportedTracks().size());
-      }
-    }else{
-      HIGH_MSG("NOT READY (%zu tracks)", getSupportedTracks().size());
+
+    // Defaults for the below values are configured here, and may be overridden with query parameters:
+    size_t minTracks = 2; // Supported tracks to attempt to wait for
+    size_t minMs = 500; // Minimum time that must be buffered for a track to count as available
+    size_t minKeys = 2; // Minimum keyframes that must be buffered for a track to count as available
+    size_t maxWait = 5000; // Maximum time to wait for tracks
+    size_t maxMs = 20000; // If this much time is buffered in any track, don't wait on anything else anymore
+
+    if (targetParams.count("waittrackcount")){
+      minTracks = JSON::Value(targetParams["waittrackcount"]).asInt();
+      // Non-default wait times get a 2 minute default timeout instead of the usually 5 seconds default.
+      // (May still be overridden)
+      maxWait = 120000;
     }
+    if (targetParams.count("mintrackms")){
+      minMs = JSON::Value(targetParams["mintrackms"]).asInt();
+    }
+    if (targetParams.count("maxtrackms")){
+      maxMs = JSON::Value(targetParams["maxtrackms"]).asInt();
+    }
+    if (targetParams.count("mintrackkeys")){
+      minKeys = JSON::Value(targetParams["mintrackkeys"]).asInt();
+    }
+    if (targetParams.count("maxwaittrackms")){
+      maxWait = JSON::Value(targetParams["maxwaittrackms"]).asInt();
+    }
+
+    if (outputStartMs + maxWait < Util::bootMS()){
+      HIGH_MSG("isReadyForPlay timed out waiting for tracks (%" PRId64 " > %zu); continuing with what we have", Util::bootMS()-outputStartMs, maxWait);
+      return true;
+    }
+
+    //This logic is copied from selectDefaultTracks, and should be kept in sync with it
+    if (!isInitialized){initialize();}
+    meta.reloadReplacedPagesIfNeeded();
+    bool autoSeek = buffer.size();
+    uint64_t seekTarget = buffer.getSyncMode()?currentTime():0;
+    std::set<size_t> trks = Util::wouldSelect(M, targetParams, capa, UA, autoSeek ? seekTarget : 0);
+
+    size_t trkCount = 0;
+    for (std::set<size_t>::iterator it = trks.begin(); it != trks.end(); ++it){
+      DTSC::Keys keys(M.keys(*it));
+      if (keys.getValidCount() >= minKeys || M.getLastms(*it) - M.getFirstms(*it) > minMs){
+        ++trkCount;
+        if (trkCount >= minTracks){return true;}
+      }
+      if (M.getLastms(*it) - M.getFirstms(*it) > maxMs){
+        HIGH_MSG("isReadyForPlay skipping wait because track %zu has %" PRId64 "ms buffered", *it, M.getLastms(*it) - M.getFirstms(*it));
+        return true;
+      }
+    }
+
+    HIGH_MSG("isReadyForPlay waiting for tracks: %zu/%zu/%zu tracks, maxWait %zu, minMs %zu, minKeys %zu", trkCount, trks.size(), minTracks, maxWait, minMs, minKeys);
     return false;
   }
 
@@ -505,7 +534,7 @@ namespace Mist{
     //Return the next key
     return keys.getTime(keyNum+1);
   }
-  
+
   uint64_t Output::pageNumForKey(size_t trackId, size_t keyNum){
     const Util::RelAccX &tPages = M.pages(trackId);
     for (uint64_t i = tPages.getDeleted(); i < tPages.getEndPos(); i++){
@@ -537,7 +566,7 @@ namespace Mist{
   ///                    If 0, will not remove segments based on the segment count
   /// \param segmentCount: current counter of segments that have been segmented as part of this stream
   /// \param segmentsRemoved: counter of segments that have been removed previously from the playlist
-  /// \param curTime: the current local timestamp in milliseconds 
+  /// \param curTime: the current local timestamp in milliseconds
   /// \param targetDuration: value to fill in for the EXT-X-TARGETDURATION entry in the playlist
   /// \param playlistLocation: the location of the playlist, used to find the path to segments when removing them
   void Output::reinitPlaylist(std::string &playlistBuffer, uint64_t &targetAge, uint64_t &maxEntries,
@@ -669,7 +698,7 @@ namespace Mist{
     while (keepGoing() && pageNum == INVALID_KEY_NUM){
       if (!timeout){HIGH_MSG("Requesting page with key %zu:%zu", trackId, keyNum);}
       ++timeout;
-      //Time out after 15s for live or 30s for vod 
+      //Time out after 15s for live or 30s for vod
       if (timeout > maxTimeout){
         FAIL_MSG("Timeout while waiting for requested key %zu for track %zu. Aborting.", keyNum, trackId);
         curPage.erase(trackId);
@@ -1060,7 +1089,7 @@ namespace Mist{
           seekPos = startRec;
         }
       }
-      
+
       if (targetParams.count("split")){
         long long endRec = atoll(targetParams["split"].c_str()) * 1000;
         INFO_MSG("Will split recording every %lld seconds", atoll(targetParams["split"].c_str()));
@@ -1086,7 +1115,7 @@ namespace Mist{
       if (targetParams.count("recstart")){
         INFO_MSG("Recording will start at timestamp %llu ms", atoll(targetParams["recstart"].c_str()));
       } else{
-        INFO_MSG("Recording will start at timestamp %" PRIu64 " ms", endTime()); 
+        INFO_MSG("Recording will start at timestamp %" PRIu64 " ms", endTime());
       }
       if (targetParams.count("recstop")){
         INFO_MSG("Recording will stop at timestamp %llu ms", atoll(targetParams["recstop"].c_str()));
@@ -1094,7 +1123,7 @@ namespace Mist{
       // Wait for the stream to catch up to the starttime
       uint64_t streamAvail = endTime();
       uint64_t lastUpdated = Util::getMS();
-      if (atoll(targetParams["recstart"].c_str()) > streamAvail){       
+      if (atoll(targetParams["recstart"].c_str()) > streamAvail){
         INFO_MSG("Waiting for stream to reach recording starting point. Recording will start in " PRETTY_PRINT_TIME, PRETTY_ARG_TIME((atoll(targetParams["recstart"].c_str()) - streamAvail) / 1000));
         while (Util::getMS() - lastUpdated < 10000 && atoll(targetParams["recstart"].c_str()) > streamAvail && keepGoing()){
           Util::sleep(250);
@@ -1118,7 +1147,7 @@ namespace Mist{
       if (M.getLive() && targetParams.count("pushdelay")){
         INFO_MSG("Converting pushdelay syntax into corresponding recstart+realtime options");
 
-        uint64_t delayTime = JSON::Value(targetParams["pushdelay"]).asInt()*1000; 
+        uint64_t delayTime = JSON::Value(targetParams["pushdelay"]).asInt()*1000;
         if (endTime() - startTime() < delayTime){
           uint64_t waitTime = delayTime - (endTime() - startTime());
           uint64_t waitTarget = Util::bootMS() + waitTime;
@@ -1437,7 +1466,7 @@ namespace Mist{
     Socket::Connection plsConn;
     uint64_t systemBoot;
 
-    std::string origTarget; 
+    std::string origTarget;
     const char* origTargetPtr = getenv("MST_ORIG_TARGET");
     if (origTargetPtr){
       origTarget = origTargetPtr;
@@ -1547,7 +1576,7 @@ namespace Mist{
           config->getOption("target", true).append(playlistLocationString);
         }else{
           playlistLocationString = playlistLocation.getUrl();
-          // Disable sliding window playlists, as the current external writer 
+          // Disable sliding window playlists, as the current external writer
           // implementation requires us to keep a single connection to the playlist open
           maxEntries = 0;
           targetAge = 0;
@@ -2126,7 +2155,7 @@ namespace Mist{
             }
             return false;//no sleep after reconnect
           }
-          
+
           //Fine! We didn't want a packet, anyway. Let's try again later.
           playbackSleep(10);
           return false;
@@ -2241,7 +2270,7 @@ namespace Mist{
 
       //Okay, there's no next page yet, and no next packet on this page either.
       //That means we're waiting for data to show up, somewhere.
-      
+
       //In non-sync mode, shuffle the just-tried packet to the end of queue and retry
       if (!buffer.getSyncMode()){
         buffer.moveFirstToEnd();
@@ -2267,7 +2296,7 @@ namespace Mist{
           return true;
         }
       }
-      
+
       //Fine! We didn't want a packet, anyway. Let's try again later.
       playbackSleep(10);
       return false;
@@ -2517,7 +2546,7 @@ namespace Mist{
     payl << Util::exitReason << '\n';
     return payl.str();
   }
-  
+
   void Output::recEndTrigger(){
     if (Util::Config::binaryType == Util::OUTPUT && config->hasOption("target") && Triggers::shouldTrigger("RECORDING_END", streamName)){
       Triggers::doTrigger("RECORDING_END", getExitTriggerPayload(), streamName);
@@ -2631,7 +2660,7 @@ namespace Mist{
             // If we could, kill the input
             if (iPid){Util::Procs::Stop(iPid);}
           }
-          
+
           // If resuming is not enabled, wait for the stream to shut down before we continue
           if (resumeSupport != 1){
             INFO_MSG("Waiting for stream reset before attempting push input accept");

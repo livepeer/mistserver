@@ -379,15 +379,23 @@ namespace Mist{
       /*LTS-END*/
       if (H.hasHeader("User-Agent")){UA = H.GetHeader("User-Agent");}
 
-      if (H.GetVar("audio") != ""){targetParams["audio"] = H.GetVar("audio");}
-      if (H.GetVar("video") != ""){targetParams["video"] = H.GetVar("video");}
-      if (H.GetVar("meta") != ""){targetParams["meta"] = H.GetVar("meta");}
-      if (H.GetVar("subtitle") != ""){targetParams["subtitle"] = H.GetVar("subtitle");}
-      if (H.GetVar("start") != ""){targetParams["start"] = H.GetVar("start");}
-      if (H.GetVar("stop") != ""){targetParams["stop"] = H.GetVar("stop");}
-      if (H.GetVar("startunix") != ""){targetParams["startunix"] = H.GetVar("startunix");}
-      if (H.GetVar("stopunix") != ""){targetParams["stopunix"] = H.GetVar("stopunix");}
-      if (H.GetVar("duration") != ""){targetParams["duration"] = H.GetVar("duration");}
+#define HTTP_CONVERT(var) if (H.GetVar(var) != ""){targetParams[var] = H.GetVar(var);}
+
+      HTTP_CONVERT("audio");
+      HTTP_CONVERT("video");
+      HTTP_CONVERT("meta");
+      HTTP_CONVERT("subtitle");
+      HTTP_CONVERT("start");
+      HTTP_CONVERT("stop");
+      HTTP_CONVERT("startunix");
+      HTTP_CONVERT("duration");
+      HTTP_CONVERT("stopunix");
+      HTTP_CONVERT("waittrackcount");
+      HTTP_CONVERT("mintrackms");
+      HTTP_CONVERT("maxtrackms");
+      HTTP_CONVERT("mintrackkeys");
+      HTTP_CONVERT("maxwaittrackms");
+
       // allow setting of max lead time through buffer variable.
       // max lead time is set in MS, but the variable is in integer seconds for simplicity.
       if (H.GetVar("buffer") != ""){
@@ -461,7 +469,7 @@ namespace Mist{
     //Parse JSON and check command type
     JSON::Value command = JSON::fromString(webSock->data, webSock->data.size());
     if (!command || !command.isMember("type")){return false;}
-    
+
     //Seek command, for changing playback position
     if (command["type"] == "seek") {
       handleWebsocketSeek(command);
@@ -566,7 +574,7 @@ namespace Mist{
         parseData = true;
         selectDefaultTracks();
       }
-      
+
       if (target_rate == 0.0){
         r["data"]["play_rate_prev"] = "auto";
       }else{
@@ -663,7 +671,7 @@ namespace Mist{
     r["data"]["current"] = targetTime();
     r["data"]["next"] = currentTime();
     r["data"]["begin"] = Output::startTime();
-    
+
     r["data"]["end"] = Output::endTime();
     if (realTime == 0){
       r["data"]["play_rate_curr"] = "fast-forward";
@@ -772,7 +780,7 @@ namespace Mist{
     stayLive = (target_rate == 0.0) && (Output::endTime() < seek_time + 5000);
     if (command["seek_time"].asStringRef() == "live"){stayLive = true;}
     if (stayLive){seek_time = Output::endTime();}
-    
+
     if (!seek(seek_time, true)) {
       r["error"] = "seek failed, continuing as-is";
       webSock->sendFrame(r.toString());
@@ -832,7 +840,7 @@ namespace Mist{
       if (Comms::tknMode & 0x08){
         std::stringstream cookieHeader;
         cookieHeader << "tkn=" << tkn << "; Max-Age=" << SESS_TIMEOUT;
-        H.SetHeader("Set-Cookie", cookieHeader.str()); 
+        H.SetHeader("Set-Cookie", cookieHeader.str());
       }
     }
     //Set attachment header to force download, if applicable
