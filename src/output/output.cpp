@@ -387,7 +387,7 @@ namespace Mist{
     if (isPushing()){return;}
 
     //live streams that are no push outputs (recordings), wait for stream to be ready
-    if (!isRecording() && M && M.getLive() && !isReadyForPlay()){
+    if (M && M.getLive() && !isReadyForPlay()){
       uint64_t waitUntil = Util::bootSecs() + 45;
       while (M && M.getLive() && !isReadyForPlay()){
         if (Util::bootSecs() > waitUntil || (!userSelect.size() && Util::bootSecs() > waitUntil)){
@@ -1114,7 +1114,7 @@ namespace Mist{
       // Print calculated start and stop time
       if (targetParams.count("recstart")){
         INFO_MSG("Recording will start at timestamp %llu ms", atoll(targetParams["recstart"].c_str()));
-      } else{
+      }else{
         INFO_MSG("Recording will start at timestamp %" PRIu64 " ms", endTime());
       }
       if (targetParams.count("recstop")){
