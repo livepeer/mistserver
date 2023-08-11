@@ -1118,7 +1118,6 @@ namespace Mist{
           startRec = startTime();
           WARN_MSG("Record begin at %lld ms not available, starting at %" PRIu64
                    " ms instead", atoll(targetParams["recstart"].c_str()), startRec);
-          targetParams["recstart"] = JSON::Value(startRec).asString();
         }
         size_t mainTrack = getMainSelectedTrack();
         if (mainTrack != INVALID_TRACK_ID && M.getType(mainTrack) == "video"){
@@ -1129,6 +1128,7 @@ namespace Mist{
         }else{
           seekPos = startRec;
         }
+        targetParams["recstart"] = JSON::Value(seekPos).asString();
       }
       
       // Wait for the stream to catch up to the starttime
