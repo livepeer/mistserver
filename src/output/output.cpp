@@ -1888,6 +1888,10 @@ namespace Mist{
                 targetParams["nxt-split"] = JSON::Value(endRec).asString();
                 sentHeader = false;
                 sendHeader();
+                if (!meta){
+                  Util::logExitReason(ER_SHM_LOST, "lost internal connection to stream data mid target switch");
+                  break;
+                }
               }else{
                 if (!onFinish()){
                   INFO_MSG("Shutting down because planned stopping point reached");
