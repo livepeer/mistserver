@@ -1073,6 +1073,7 @@ namespace Mist{
     if (!isInitialized){initialize();}
     buffer.clear();
     thisPacket.null();
+    if (!M){return false;}
     if (toKey){
       size_t mainTrack = getMainSelectedTrack();
       if (mainTrack == INVALID_TRACK_ID){
