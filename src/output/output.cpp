@@ -1242,7 +1242,7 @@ namespace Mist{
     if (!meta){return;}
     meta.removeLimiter();
     uint64_t seekPos = 0;
-    if (meta.getLive() && buffer.getSyncMode()){
+    if (meta.getLive()){
       size_t mainTrack = getMainSelectedTrack();
       if (mainTrack == INVALID_TRACK_ID){return;}
       DTSC::Keys keys(M.getKeys(mainTrack));
