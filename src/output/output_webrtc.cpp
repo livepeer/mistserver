@@ -714,9 +714,23 @@ namespace Mist{
           noSignalling = true;
           H.SetHeader("Content-Type", "application/sdp");
           H.SetHeader("Location", streamName + "/" + JSON::Value(getpid()).asString());
-          if (req.GetVar("constant").size()){
-            INFO_MSG("Disabling automatic playback rate control");
-            maxSkipAhead = 1;//disable automatic rate control
+          if (!isPushing()){
+            if (req.GetVar("constant").size()){
+              INFO_MSG("Disabling automatic playback rate control");
+              maxSkipAhead = 1;//disable automatic rate control
+            }
+            initialSeek();
+            H.SetHeader("Playhead-millis", currentTime());
+            if (M.getLive() || M.getUTCOffset()){
+              uint64_t systemBoot = Util::getGlobalConfig("systemBoot").asInt();
+              uint64_t unixMs;
+              if (M.getUTCOffset()){
+                unixMs = M.getUTCOffset() + currentTime();
+              }else{
+                unixMs = M.getBootMsOffset() + systemBoot + currentTime();
+              }
+              H.SetHeader("Playhead-UTC", Util::getUTCStringMillis(unixMs));
+            }
           }
           H.StartResponse("201", "Created", req, myConn);
           H.Chunkify(sdpAnswer.toString(), myConn);
