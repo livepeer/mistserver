@@ -539,11 +539,7 @@ namespace Mist{
           noSignalling = true;
           H.SetHeader("Content-Type", "application/sdp");
           H.SetHeader("Location", streamName + "/" + JSON::Value(getpid()).asString());
-          if (!isPushing()){
-            if (req.GetVar("constant").size()){
-              INFO_MSG("Disabling automatic playback rate control");
-              maxSkipAhead = 1;//disable automatic rate control
-            }
+          if (!isPushing() && M){
             initialSeek();
             H.SetHeader("Playhead-millis", currentTime());
             if (M.getLive() || M.getUTCOffset()){
@@ -556,6 +552,10 @@ namespace Mist{
               }
               H.SetHeader("Playhead-UTC", Util::getUTCStringMillis(unixMs));
             }
+          }
+          if (req.GetVar("constant").size()){
+            INFO_MSG("Disabling automatic playback rate control");
+            maxSkipAhead = 1;//disable automatic rate control
           }
           H.StartResponse("201", "Created", req, myConn);
           H.Chunkify(sdpAnswer.toString(), myConn);
