@@ -1437,6 +1437,7 @@ namespace Mist{
     playLog["ip"] = getConnectedHost();
     playLog["protocol"] = statProto;
     playLog["player"] = statPlayer;
+    playLog["tkn"] = tkn;
     playLog["streamname"] = streamName;
     playLog["conn_time"] = startingTime;
     playLog["play_time"] = statPlaytime;
