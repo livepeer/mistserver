@@ -133,7 +133,7 @@ if usessl
   endif
 
   mist_deps += [mbedtls, mbedx509, mbedcrypto]
-  mist_deps += dependency('libsrtp2', default_options: ['tests=disabled', 'crypto-library=mbedtls'], fallback: ['libsrtp2', 'libsrtp2_dep'])
+  mist_deps += dependency('libsrtp2', default_options: ['tests=disabled', 'crypto-library=nss'], fallback: ['libsrtp2', 'libsrtp2_dep'])
 endif
 
 libsrt = false
