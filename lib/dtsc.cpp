@@ -959,6 +959,7 @@ namespace DTSC{
       sBufMem();
     }else{
       sBufShm(_streamName, DEFAULT_TRACK_COUNT, master, autoBackOff);
+      if (!streamPage){return;}
     }
     streamInit();
     if (isMaster){
@@ -1183,7 +1184,7 @@ namespace DTSC{
     }else{
       streamPage.init(pageName, bufferSize, false, autoBackOff);
       if (!streamPage.mapped){
-        INFO_MSG("Page %s not found", pageName);
+        if (autoBackOff){INFO_MSG("Page %s not found", pageName);}
         return;
       }
       stream = Util::RelAccX(streamPage.mapped, true);
