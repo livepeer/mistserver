@@ -113,7 +113,7 @@ namespace Controller{
     }
     //Check if the stream has a pull source, if yes, pretend all pushes are already active
     DTSC::Meta M(streamname, false, false);
-    if (M && M.getSource().find("INTERNAL_ONLY:dtsc") != std::string::npos){return true;}
+    if (!M || M.getSource().find("INTERNAL_ONLY:dtsc") != std::string::npos){return true;}
     return false;
   }
 
