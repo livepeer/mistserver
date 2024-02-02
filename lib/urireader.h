@@ -1,6 +1,8 @@
 #pragma once
 #include "downloader.h"
 #include "util.h"
+#include <fstream>
+#include <set>
 namespace HTTP{
 
   enum URIType{Closed = 0, File, Stream, HTTP};
@@ -66,6 +68,7 @@ namespace HTTP{
     virtual size_t getDataCallbackPos() const;
 
     std::string userAgentOverride;
+    std::set<std::string> addHeaders;
 
     std::string getHost() const; ///< Gets hostname for connection, or [::] if local.
     std::string getBinHost() const; ///< Gets binary form hostname for connection, or [::] if local.
