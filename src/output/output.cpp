@@ -2198,8 +2198,10 @@ namespace Mist{
 
         //If the next packet should've been before the current packet, something is wrong.
         if (nextTime < nxt.time){
-          //Re-try the read in ~5ms, hoping this is a race condition we missed somewhere.
-          Util::sleep(5);
+          //Re-try the read in ~50ms, hoping this is a race condition we missed somewhere.
+          Util::sleep(50);
+          meta.reloadReplacedPagesIfNeeded();
+          DTSC::Keys keys(M.keys(nxt.tid));
           nextTime = keys.getTime(thisKey + 1);
           //Still wrong? Abort, abort!
           if (nextTime < nxt.time){
