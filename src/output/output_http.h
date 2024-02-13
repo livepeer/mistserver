@@ -45,6 +45,7 @@ namespace Mist{
     size_t prevVidTrack; ///< Previously selected main video track
     bool stayLive; ///< Whether or not we're trying to stay on the live-most point, for live streams
 
+    virtual void connStats(uint64_t now, Comms::Connections &statComm);
     std::string fwdHostStr; ///< Forwarded string IP, if non-empty
     std::string fwdHostBin; ///< Forwarded binary IP, if non-empty
     bool responded;
