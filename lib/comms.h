@@ -80,7 +80,7 @@ namespace Comms{
 
     void setExit();
     bool getExit();
-    
+
     virtual void addFields();
     virtual void nullFields();
     virtual void fieldAccess();
@@ -143,6 +143,16 @@ namespace Comms{
     void setPacketRetransmitCount(uint64_t _retransmit);
     void setPacketRetransmitCount(uint64_t _retransmit, size_t idx);
 
+    std::string getURL() const;
+    std::string getURL(size_t idx) const;
+    void setURL(std::string _stream);
+    void setURL(std::string _stream, size_t idx);
+
+    std::string getCookie() const;
+    std::string getCookie(size_t idx) const;
+    void setCookie(std::string _stream);
+    void setCookie(std::string _stream, size_t idx);
+
   protected:
     Util::FieldAccX now;
     Util::FieldAccX time;
@@ -157,6 +167,8 @@ namespace Comms{
     Util::FieldAccX pktcount;
     Util::FieldAccX pktloss;
     Util::FieldAccX pktretrans;
+    Util::FieldAccX url;
+    Util::FieldAccX cookie;
   };
 
   class Users : public Comms{
