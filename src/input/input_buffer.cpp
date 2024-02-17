@@ -611,18 +611,7 @@ namespace Mist{
 
     // No UUID yet? Generate one.
     if (!meta.getUUID().size()){
-      const char * charset = "0123456789abcdef";
-      std::string uuid = "00000000-0000-4000-D000-000000000000";
-      //Primitive seeding of the prng
-      srand(Util::mix(clock(), time(0), getpid()));
-      for (size_t i = 0; i < uuid.size(); ++i){
-        if (uuid[i] == 'D'){
-          uuid[i] = charset[8+rand()%4];
-          continue;
-        }
-        if (uuid[i] != '0'){continue;}
-        uuid[i] = charset[rand()%16];
-      }
+      std::string uuid = Util::generateUUID();
       Util::setUUID(uuid);
       if (Triggers::shouldTrigger("UUID_GENERATE", streamName)){
         std::string payload = uuid + "\n" + streamName + "\n" + config->getString("input");

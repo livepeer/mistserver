@@ -190,7 +190,7 @@ namespace Util{
     }
     val = val.substr(startPos, length);
   }
-  
+
   /// \brief splits a string on commas and returns a list of substrings
   void splitString(std::string &src, char delim, std::deque<std::string> &result){
     result.clear();
@@ -299,7 +299,9 @@ namespace Util{
     std::string s;
     for (int i = 0; i < len; ++i)
     {
-      s.push_back(alphanum[rand() % (sizeof(alphanum) - 1)]);
+      uint32_t ranNum;
+      Util::getRandomBytes(&ranNum, 4);
+      s.push_back(alphanum[ranNum % (sizeof(alphanum) - 1)]);
     }
 
     return s;
