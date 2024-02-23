@@ -204,6 +204,11 @@ namespace Mist{
   void InputFLV::getNext(size_t idx){
     uint64_t lastBytePos = readPos + readBufferOffset;
     size_t needed = 0;
+    if (!inFile && readBufferOffset >= readBuffer.size()){
+      Util::logExitReason(ER_CLEAN_EOF, "reached EOF");
+      thisPacket.null();
+      return;
+    }
     while (inFile || readBufferOffset < readBuffer.size()){
       if (!slideWindowTo(readPos + readBufferOffset, needed)){
         Util::logExitReason(ER_READ_START_FAILURE, "input read/seek error");
@@ -232,6 +237,7 @@ namespace Mist{
 
     // Reached EOF - not an error
     if (needed){
+      Util::logExitReason(ER_CLEAN_EOF, "reached EOF");
       thisPacket.null();
       return;
     }
