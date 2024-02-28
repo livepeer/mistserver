@@ -291,6 +291,10 @@ namespace Triggers{
       if (isHandled){
         VERYHIGH_MSG("%s trigger handled by %s", type.c_str(), uri.c_str());
         if (dryRun){return true;}
+
+        setenv("MIST_TRIGGER", type.c_str(), 1);
+        setenv("MIST_TRIG_DEF", defaultResponse.c_str(), 1);
+        setenv("MIST_UUID", Util::UUID, 1);
         if (sync){
           response = handleTrigger(type, uri, payload, sync, defaultResponse); // do it.
           retVal &= Util::stringToBool(response);
@@ -298,6 +302,9 @@ namespace Triggers{
           std::string unused_response = handleTrigger(type, uri, payload, sync, defaultResponse); // do it.
           retVal &= Util::stringToBool(unused_response);
         }
+        unsetenv("MIST_TRIGGER");
+        unsetenv("MIST_TRIG_DEF");
+        unsetenv("MIST_UUID");
       }
     }
 
