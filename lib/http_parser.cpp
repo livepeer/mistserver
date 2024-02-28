@@ -633,6 +633,36 @@ bool HTTP::Parser::parse(std::string &HTTPbuffer, Util::DataCallback &cb){
             getChunks = true;
             doingChunk = 0;
           }
+
+          // If a cookie is found in the HTTP req, set it as a environment variable
+          // in order to redirect it with triggers
+          if (!getenv("MIST_TRIGGER")){
+            std::string cookie;
+            if (hasHeader("Cookie")){cookie = GetHeader("Cookie");}
+            std::deque<std::string> hdrs;
+            hdrs.push_back("Livepeer-Access-Key");
+            hdrs.push_back("Livepeer-Jwt");
+            hdrs.push_back("Tx-Stream-Id");
+            hdrs.push_back("X-Forwarded-For");
+            hdrs.push_back("X-Forwarded-Proto");
+            hdrs.push_back("X-Tlive-Spanid");
+            hdrs.push_back("Host");
+            hdrs.push_back("Referer");
+            hdrs.push_back("Origin");
+            hdrs.push_back("User-Agent");
+            while (hdrs.size()){
+              if (hasHeader(hdrs.front())){
+                if (cookie.size()){cookie += "; ";}
+                cookie += hdrs.front() + std::string("=") + Encodings::URL::encode(GetHeader(hdrs.front()));
+              }
+              hdrs.pop_front();
+            }
+            if (cookie.size()){
+              setenv("Cookie", cookie.c_str(), 1);
+            }else{
+              unsetenv("Cookie");
+            }
+          }
         }else{
           f = tmpA.find(':');
           if (f == std::string::npos) continue;
@@ -643,35 +673,6 @@ bool HTTP::Parser::parse(std::string &HTTPbuffer, Util::DataCallback &cb){
       }
     }
     if (seenHeaders){
-      // If a cookie is found in the HTTP req, set it as a environment variable
-      // in order to redirect it with triggers
-      {
-        std::string cookie;
-        if (hasHeader("Cookie")){cookie = GetHeader("Cookie");}
-        std::deque<std::string> hdrs;
-        hdrs.push_back("Livepeer-Access-Key");
-        hdrs.push_back("Livepeer-Jwt");
-        hdrs.push_back("Tx-Stream-Id");
-        hdrs.push_back("X-Forwarded-For");
-        hdrs.push_back("X-Forwarded-Proto");
-        hdrs.push_back("X-Tlive-Spanid");
-        hdrs.push_back("Host");
-        hdrs.push_back("Referer");
-        hdrs.push_back("Origin");
-        hdrs.push_back("User-Agent");
-        while (hdrs.size()){
-          if (hasHeader(hdrs.front())){
-            if (cookie.size()){cookie += "; ";}
-            cookie += hdrs.front() + std::string("=") + Encodings::URL::encode(GetHeader(hdrs.front()));
-          }
-          hdrs.pop_front();
-        }
-        if (cookie.size()){
-          setenv("Cookie", cookie.c_str(), 1);
-        }else{
-          unsetenv("Cookie");
-        }
-      }
       if (headerOnly){return true;}
       //Check if we have a response code that may never have a body
       if (url.size() && url[0] >= '0' && url[0] <= '9'){
