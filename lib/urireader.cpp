@@ -96,6 +96,7 @@ namespace HTTP{
     curPos = 0;
     bufPos = 0;
     quietMode = false;
+    readTimeout = 0;
   }
 
   URIReader::URIReader(){init();}
@@ -208,43 +209,58 @@ namespace HTTP{
 
     // HTTP, stream or regular download?
     if (myURI.protocol == "http" || myURI.protocol == "https"){
+      openTime = Util::bootMS();
+      if (readTimeout){
+        downer.retryCount = readTimeout;
+        downer.dataTimeout = readTimeout;
+      }
       stateType = HTTP;
-      downer.clearHeaders();
 
-      // One set of headers specified for HEAD request
-      injectHeaders(originalUrl, "HEAD", downer, addHeaders);
-      // Send HEAD request to determine range request is supported, and get total length
-      if (userAgentOverride.size()){downer.setHeader("User-Agent", userAgentOverride);}
-      if (!downer.head(myURI) || !downer.isOk()){
-        if (!quietMode){
-          FAIL_MSG("Error getting URI info for '%s': %" PRIu32 " %s", myURI.getUrl().c_str(),
-                  downer.getStatusCode(), downer.getStatusText().c_str());
-        }
-        // Close the socket, and clean up the buffer
-        downer.getSocket().close();
-        downer.getSocket().Received().clear();
-        allData.truncate(0);
-        supportRangeRequest = false;
-        totalSize = std::string::npos;
-      }else{
-        supportRangeRequest = (downer.getHeader("Accept-Ranges").size() > 0);
-        std::string header1 = downer.getHeader("Content-Length");
-        if (header1.size()){totalSize = atoi(header1.c_str());}
-        myURI = downer.lastURL();
-      }
+      do{
+        downer.clearHeaders();
 
-      // Other set of headers specified for GET request
-      injectHeaders(originalUrl, "GET", downer, addHeaders);
-      // streaming mode when size is unknown
-      if (!supportRangeRequest){
-        MEDIUM_MSG("URI get without range request: %s, totalsize: %zu", myURI.getUrl().c_str(), totalSize);
-        downer.getNonBlocking(myURI);
-      }else{
-        MEDIUM_MSG("URI get with range request: %s, totalsize: %zu", myURI.getUrl().c_str(), totalSize);
-        if (!downer.getRangeNonBlocking(myURI, curPos, 0)){
-          FAIL_MSG("error loading url: %s", myURI.getUrl().c_str());
+        // One set of headers specified for HEAD request
+        injectHeaders(originalUrl, "HEAD", downer, addHeaders);
+        // Send HEAD request to determine range request is supported, and get total length
+        if (userAgentOverride.size()){downer.setHeader("User-Agent", userAgentOverride);}
+        if (!downer.head(myURI) || !downer.isOk()){
+          if (!quietMode){
+            FAIL_MSG("Error getting URI info for '%s': %" PRIu32 " %s", myURI.getUrl().c_str(),
+                    downer.getStatusCode(), downer.getStatusText().c_str());
+          }
+          // Close the socket, and clean up the buffer
+          downer.getSocket().close();
+          downer.getSocket().Received().clear();
+          allData.truncate(0);
+          if (!downer.isOk()){return false;}
+          supportRangeRequest = false;
+          totalSize = std::string::npos;
+        }else{
+          supportRangeRequest = (downer.getHeader("Accept-Ranges").size() > 0);
+          std::string header1 = downer.getHeader("Content-Length");
+          if (header1.size()){totalSize = atoi(header1.c_str());}
+          myURI = downer.lastURL();
         }
-      }
+
+        // Other set of headers specified for GET request
+        injectHeaders(originalUrl, "GET", downer, addHeaders);
+        // streaming mode when size is unknown
+        if (!supportRangeRequest){
+          MEDIUM_MSG("URI get without range request: %s, totalsize: %zu", myURI.getUrl().c_str(), totalSize);
+          downer.getNonBlocking(myURI);
+        }else{
+          MEDIUM_MSG("URI get with range request: %s, totalsize: %zu", myURI.getUrl().c_str(), totalSize);
+          if (!downer.getRangeNonBlocking(myURI, curPos, 0)){
+            FAIL_MSG("error loading url: %s", myURI.getUrl().c_str());
+          }
+        }
+        // Success? Break out of the loop
+        if (downer.getSocket()){
+          break;
+        }
+        // Wait a second retry
+        Util::sleep(1000);
+      } while (openTime + readTimeout * 1000 > Util::bootMS());
 
       if (!downer.getSocket()){
         FAIL_MSG("Could not open '%s': %s", myURI.getUrl().c_str(), downer.getStatusText().c_str());
@@ -343,18 +359,10 @@ namespace HTTP{
     if (stateType == HTTP::HTTP){
       // Note: this function returns true if the full read was completed only.
       // It's the reason this function returns void rather than bool.
-      size_t prev = cb.getDataCallbackPos();
-      if (downer.continueNonBlocking(cb)){
-        if (downer.getStatusCode() >= 400){
-          WARN_MSG("Received error response code %" PRIu32 " (%s)", downer.getStatusCode(), downer.getStatusText().c_str());
-          // cb.dataCallbackFlush();
-          downer.getSocket().close();
-          downer.getSocket().Received().clear();
-          allData.truncate(0);
-          return 0;
-        }
-      }
-      return cb.getDataCallbackPos() - prev;
+      size_t prePos = cb.getDataCallbackPos();
+      downer.continueNonBlocking(cb);
+      if (prePos != cb.getDataCallbackPos()){openTime = Util::bootMS();}
+      return;
     }
     // Everything else uses the socket directly
     int s = downer.getSocket().Received().bytes(wantedLen);
@@ -449,10 +457,12 @@ namespace HTTP{
     }else if (stateType == HTTP::HTTP){
       if (!downer.getSocket() && !downer.getSocket().Received().available(1) && !isSeekable()){
         if (allData.size() && bufPos < allData.size()){return false;}
+        if (openTime + readTimeout * 1000 > Util::bootMS()){return false;}
         return true;
       }
       if ((totalSize != std::string::npos && curPos >= totalSize) || downer.completed() || (totalSize == std::string::npos && !downer.getSocket())){
         if (allData.size() && bufPos < allData.size()){return false;}
+        if (totalSize == std::string::npos && openTime + readTimeout * 1000 > Util::bootMS()){return false;}
         return true;
       }
       return false;
