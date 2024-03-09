@@ -511,10 +511,10 @@ void HTTP::Parser::SetVar(std::string i, std::string v){
 /// If a whole request could be read, it is removed from the front of the socket buffer and true
 /// returned. If not, as much as can be interpreted is removed and false returned. \param conn The
 /// socket to read from. \return True if a whole request or response was read, false otherwise.
-bool HTTP::Parser::Read(Socket::Connection &conn, Util::DataCallback &cb){
+bool HTTP::Parser::Read(Socket::Connection &conn, Util::DataCallback &cb, Util::DataCallback &error_cb){
   // In this case, we might have a broken connection and need to check if we're done
   if (!conn.Received().size()){
-    return (parse(conn.Received().get(), cb) && (!possiblyComplete || !conn || !JSON::Value(url).asInt()));
+    return (parse(conn.Received().get(), cb, error_cb) && (!possiblyComplete || !conn || !JSON::Value(url).asInt()));
   }
   while (conn.Received().size()){
     // Make sure the received data ends in a newline (\n).
@@ -534,7 +534,7 @@ bool HTTP::Parser::Read(Socket::Connection &conn, Util::DataCallback &cb){
     }
 
     // return true if a parse succeeds, and is not a request
-    if (parse(conn.Received().get(), cb) && (!possiblyComplete || !conn || !JSON::Value(url).asInt())){
+    if (parse(conn.Received().get(), cb, error_cb) && (!possiblyComplete || !conn || !JSON::Value(url).asInt())){
       return true;
     }
   }
@@ -561,7 +561,7 @@ uint8_t HTTP::Parser::getPercentage() const{
 /// from the data buffer.
 /// \param HTTPbuffer The data buffer to read from.
 /// \return True on success, false otherwise.
-bool HTTP::Parser::parse(std::string &HTTPbuffer, Util::DataCallback &cb){
+bool HTTP::Parser::parse(std::string &HTTPbuffer, Util::DataCallback &cb, Util::DataCallback &error_cb){
   size_t f;
   std::string tmpA, tmpB, tmpC;
   /// \todo Make this not resize HTTPbuffer in parts, but read all at once and then remove the
@@ -675,8 +675,9 @@ bool HTTP::Parser::parse(std::string &HTTPbuffer, Util::DataCallback &cb){
     if (seenHeaders){
       if (headerOnly){return true;}
       //Check if we have a response code that may never have a body
+      unsigned int code = 200;
       if (url.size() && url[0] >= '0' && url[0] <= '9'){
-        unsigned int code = atoi(url.data());
+        code = atoi(url.data());
         if ((code >= 100 && code < 200) || code == 204 || code == 304){return true;}
       }
       if (knownLength && !getChunks){
@@ -695,8 +696,15 @@ bool HTTP::Parser::parse(std::string &HTTPbuffer, Util::DataCallback &cb){
             shouldAppend = false;
           }
 
+          // If reference error callback is set and response code >= 300, give that callback priority
+          if (shouldAppend && code >= 300 && &error_cb != &Util::defaultDataCallback){
+            error_cb.dataCallback(HTTPbuffer.data(), toappend);
+            length -= toappend;
+            shouldAppend = false;
+          }
+
           // check if reference callback function is set and run callback. remove partial data from buffer
-          if (&cb != &Util::defaultDataCallback){
+          if (shouldAppend && &cb != &Util::defaultDataCallback){
             cb.dataCallback(HTTPbuffer.data(), toappend);
             length -= toappend;
             shouldAppend = false;
@@ -726,7 +734,13 @@ bool HTTP::Parser::parse(std::string &HTTPbuffer, Util::DataCallback &cb){
               shouldAppend = false;
             }
 
-            if (&cb != &Util::defaultDataCallback){
+            // If reference error callback is set and response code >= 300, give that callback priority
+            if (shouldAppend && code >= 300 && &error_cb != &Util::defaultDataCallback){
+              error_cb.dataCallback(HTTPbuffer.data(), toappend);
+              shouldAppend = false;
+            }
+
+            if (shouldAppend && &cb != &Util::defaultDataCallback){
               cb.dataCallback(HTTPbuffer.data(), toappend);
               shouldAppend = false;
             }
@@ -766,7 +780,13 @@ bool HTTP::Parser::parse(std::string &HTTPbuffer, Util::DataCallback &cb){
             shouldAppend = false;
           }
 
-          if (&cb != &Util::defaultDataCallback){
+          // If reference error callback is set and response code >= 300, give that callback priority
+          if (shouldAppend && code >= 300 && &error_cb != &Util::defaultDataCallback){
+            error_cb.dataCallback(HTTPbuffer.data(), toappend);
+            shouldAppend = false;
+          }
+
+          if (shouldAppend && &cb != &Util::defaultDataCallback){
             cb.dataCallback(HTTPbuffer.data(), toappend);
             shouldAppend = false;
           }
