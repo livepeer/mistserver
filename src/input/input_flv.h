@@ -25,6 +25,7 @@ namespace Mist{
     bool keepRunning(bool updateActCtr = true);
     FLV::Tag tmpTag;
     uint64_t lastModTime;
+    int64_t liveOffset;
 
     HTTP::URIReader inFile;
     Util::ResizeablePointer readBuffer;
