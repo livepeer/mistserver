@@ -1079,6 +1079,7 @@ namespace Mist{
         return;
       }
       bufferLivePacket(thisPacket);
+      if (!config->is_active){break;}
       getNext();
       if (!thisPacket){
         Util::logExitReason(ER_CLEAN_EOF, "no more data");
