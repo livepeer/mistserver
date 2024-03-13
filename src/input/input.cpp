@@ -948,9 +948,14 @@ namespace Mist{
   void Input::inputServeStats(){
     uint64_t now = Util::bootSecs();
     if (now != lastStats){
-      if (!internalOnly && !isBuffer){
+      if (!internalOnly && !isBuffer && capa["name"] != "DTSC"){
         if (!statComm){statComm.reload(streamName, getConnectedBinHost(), JSON::Value(getpid()).asString(), "INPUT:" + capa["name"].asStringRef(), "");}
         if (statComm){
+          if (statComm.getStatus() & COMM_STATUS_REQDISCONNECT){
+            config->is_active = false;
+            Util::logExitReason(ER_CLEAN_CONTROLLER_REQ, "received shutdown request from controller");
+            return;
+          }
           statComm.setNow(now);
           statComm.setStream(streamName);
           statComm.setTime(now - startTime);
@@ -1078,9 +1083,6 @@ namespace Mist{
   }
 
   void Input::streamMainLoop(){
-    uint64_t statTimer = 0;
-    uint64_t startTime = Util::bootSecs();
-    Comms::Connections statComm;
     getNext();
     if (thisPacket && !userSelect.count(thisIdx)){
       userSelect[thisIdx].reload(streamName, thisIdx, COMM_STATUS_ACTIVE | COMM_STATUS_SOURCE | COMM_STATUS_DONOTTRACK);
@@ -1105,27 +1107,7 @@ namespace Mist{
         userSelect[thisIdx].reload(streamName, thisIdx, COMM_STATUS_ACTIVE | COMM_STATUS_SOURCE | COMM_STATUS_DONOTTRACK);
       }
 
-      if (M.getVod() && !M.getLive() && Util::bootSecs() - statTimer > 1){
-        if (capa["name"] != "DTSC"){
-          // Connect to stats for INPUT detection
-          if (!statComm){statComm.reload(streamName, getConnectedBinHost(), JSON::Value(getpid()).asString(), "INPUT:" + capa["name"].asStringRef(), "");}
-          if (statComm){
-            if (statComm.getExit() || statComm.getStatus() & COMM_STATUS_REQDISCONNECT){
-              config->is_active = false;
-              Util::logExitReason(ER_CLEAN_CONTROLLER_REQ, "received shutdown request from session");
-              return;
-            }
-          }
-          uint64_t now = Util::bootSecs();
-          statComm.setNow(now);
-          statComm.setStream(streamName);
-          statComm.setTime(now - startTime);
-          statComm.setLastSecond(0);
-          connStats(statComm);
-        }
-
-        statTimer = Util::bootSecs();
-      }
+      inputServeStats();
     }
   }
   
@@ -1139,8 +1121,6 @@ namespace Mist{
     uint64_t statTimer = 0;
     uint64_t startTime = Util::bootSecs();
     size_t idx;
-    Comms::Connections statComm;
-
 
     DTSC::Meta liveMeta(config->getString("streamname"), false);
     DTSC::veryUglyJitterOverride = SIMULATED_LIVE_BUFFER;
