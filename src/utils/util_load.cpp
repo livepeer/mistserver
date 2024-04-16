@@ -227,7 +227,7 @@ public:
   }
   /// Scores a potential new connection to this server
   /// 0 means not possible, the higher the better.
-  uint64_t rate(std::string &s, double lati = 0, double longi = 0, const std::map<std::string, int32_t> &tagAdjust = blankTags){
+  uint64_t rate(std::string &s, double lati = 0, double longi = 0, const std::map<std::string, int32_t> &tagAdjust = blankTags, uint8_t dbg = 0){
     if (!hostMutex){hostMutex = new std::mutex();}
     std::lock_guard<std::mutex> guard(*hostMutex);
     if (!ramMax || !availBandwidth){
@@ -264,11 +264,13 @@ public:
     }else{
       score = 0;
     }
-    // Print info on host
-    MEDIUM_MSG("%s: CPU %" PRIu64 ", RAM %" PRIu64 ", Stream %zu, BW %" PRIu64
-               " (max %" PRIu64 " MB/s), Geo %" PRIu64 ", tag adjustment %" PRId64 " -> %" PRIu64,
-               host.c_str(), cpu_score, ram_score, streams.count(s) ? weight_bonus : (size_t)0, bw_score,
+    // Print info on host only when debug flag has been enabled on a node (otherwise it's too noisy and can fill up logs for each playback request)
+    if (dbg) {
+      INFO_MSG("Node: %s, PlaybackID: %s, CPU: %" PRIu64 ", RAM: %" PRIu64 ", Stream: %zu, BW: %" PRIu64
+               " (max %" PRIu64 " MB/s), Geo: %" PRIu64 ", tag adjustment: %" PRId64 ", Score: %" PRIu64,
+               host.c_str(), s.c_str(), cpu_score, ram_score, streams.count(s) ? weight_bonus : (size_t)0, bw_score,
                availBandwidth / 1024 / 1024, geo_score, adjustment, score);
+    }
     return score;
   }
   /// Scores this server as a source
@@ -440,6 +442,7 @@ struct hostEntry{
   char name[HOSTNAMELEN];          // host+port for server
   hostDetails *details;    /// hostDetails pointer
   std::thread *thread; /// thread pointer
+  uint8_t debug; // 0 = off, 1 = on (used for verbose debug logs)
 };
 
 hostEntry hosts[MAXHOSTS]; /// Fixed-size array holding all hosts
@@ -479,6 +482,7 @@ int handleRequest(Socket::Connection &conn){
         std::string addserver = H.GetVar("addserver");
         std::string delserver = H.GetVar("delserver");
         std::string weights = H.GetVar("weights");
+        std::string debug = H.GetVar("debug");
         H.Clean();
         H.SetHeader("Content-Type", "text/plain");
         JSON::Value ret;
@@ -721,6 +725,19 @@ int handleRequest(Socket::Connection &conn){
             }
           }
         }
+        if (debug.size()){
+          for (HOSTLOOP){
+            HOSTCHECK;
+            if (hosts[i].state == STATE_OFF){continue;}
+	    if (strcmp(debug.c_str(),"1") == 0) {
+              hosts[i].debug = 1;
+	    } else {
+              hosts[i].debug = 0;
+	    }
+            ret = hosts[i].debug;
+            INFO_MSG("Setting debug: %s for %s", debug.c_str(), hosts[i].name);
+          }
+        }
         H.SetBody(ret.toPrettyString());
         H.setCORSHeaders();
         H.SendResponse("200", "OK", conn);
@@ -764,7 +781,8 @@ int handleRequest(Socket::Connection &conn){
       uint64_t bestScore = 0;
       for (HOSTLOOP){
         HOSTCHECK;
-        uint64_t score = HOST(i).details->rate(stream, lat, lon, tagAdjust);
+        uint8_t debugEnable = HOST(i).debug;
+        uint64_t score = HOST(i).details->rate(stream, lat, lon, tagAdjust, debugEnable);
         if (score > bestScore){
           bestHost = &HOST(i);
           bestScore = score;
