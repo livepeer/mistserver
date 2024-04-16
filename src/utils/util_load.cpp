@@ -228,7 +228,7 @@ public:
   }
   /// Scores a potential new connection to this server
   /// 0 means not possible, the higher the better.
-  uint64_t rate(std::string &s, double lati = 0, double longi = 0, const std::map<std::string, int32_t> &tagAdjust = blankTags, uint8_t dbg){
+  uint64_t rate(std::string &s, double lati = 0, double longi = 0, const std::map<std::string, int32_t> &tagAdjust = blankTags, uint8_t dbg = 0){
     if (!hostMutex){hostMutex = new tthread::mutex();}
     tthread::lock_guard<tthread::mutex> guard(*hostMutex);
     if (!ramMax || !availBandwidth){
@@ -731,7 +731,7 @@ int handleRequest(Socket::Connection &conn){
             }
           }
         }
-        if (host.debug()){
+        if (debug.size()){
           for (HOSTLOOP){
             if (hosts[i].state == STATE_OFF){continue;}
             hosts[i].debug = 1;
@@ -789,7 +789,7 @@ int handleRequest(Socket::Connection &conn){
       uint64_t bestScore = 0;
       for (HOSTLOOP){
         HOSTCHECK;
-        uint8_t debugEnable = HOST(i).debug
+        uint8_t debugEnable = HOST(i).debug;
         uint64_t score = HOST(i).details->rate(stream, lat, lon, tagAdjust, debugEnable);
         if (score > bestScore){
           bestHost = &HOST(i);
