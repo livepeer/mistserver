@@ -265,16 +265,11 @@ public:
     }else{
       score = 0;
     }
-    // Print info on host
+    // Print info on host only when debug flag has been enabled on a node (otherwise it's too noisy and can fill up logs for each playback request)
     if (dbg) {
-      INFO_MSG("%s (%s) CPU %" PRIu64 ", RAM %" PRIu64 ", Stream %zu, BW %" PRIu64
-               " (max %" PRIu64 " MB/s), Geo %" PRIu64 ", tag adjustment %" PRId64 " -> %" PRIu64,
+      INFO_MSG("Node: %s, PlaybackID: %s, CPU: %" PRIu64 ", RAM: %" PRIu64 ", Stream: %zu, BW: %" PRIu64
+               " (max %" PRIu64 " MB/s), Geo: %" PRIu64 ", tag adjustment: %" PRId64 ", Score: %" PRIu64,
                host.c_str(), s.c_str(), cpu_score, ram_score, streams.count(s) ? weight_bonus : (size_t)0, bw_score,
-               availBandwidth / 1024 / 1024, geo_score, adjustment, score);
-    } else {
-      MEDIUM_MSG("%s: CPU %" PRIu64 ", RAM %" PRIu64 ", Stream %zu, BW %" PRIu64
-               " (max %" PRIu64 " MB/s), Geo %" PRIu64 ", tag adjustment %" PRId64 " -> %" PRIu64,
-               host.c_str(), cpu_score, ram_score, streams.count(s) ? weight_bonus : (size_t)0, bw_score,
                availBandwidth / 1024 / 1024, geo_score, adjustment, score);
     }
     return score;
@@ -733,17 +728,15 @@ int handleRequest(Socket::Connection &conn){
         }
         if (debug.size()){
           for (HOSTLOOP){
-            if (hosts[i].state == STATE_OFF){continue;}
-            hosts[i].debug = 1;
-            ret = hosts[i].debug;
             HOSTCHECK;
-          }
-        }else{
-          for (HOSTLOOP){
             if (hosts[i].state == STATE_OFF){continue;}
-            hosts[i].debug = 0;
+	    if (strcmp(debug.c_str(),"1") == 0) {
+              hosts[i].debug = 1;
+	    } else {
+              hosts[i].debug = 0;
+	    }
             ret = hosts[i].debug;
-            HOSTCHECK;
+            INFO_MSG("Setting debug: %s for %s", debug.c_str(), hosts[i].name);
           }
         }
         H.SetBody(ret.toPrettyString());
