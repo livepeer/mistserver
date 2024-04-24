@@ -29,7 +29,7 @@ namespace Controller{
 
   /// Updates the shared memory page with active connectors
   void saveActiveConnectors(bool forceOverride){
-    IPC::sharedPage f("MstCnns", 409600, forceOverride, false);
+    IPC::sharedPage f("MstCnns", 4096000, forceOverride, false);
     if (!f.mapped){
       if (!forceOverride){
         saveActiveConnectors(true);
@@ -43,7 +43,7 @@ namespace Controller{
     memset(f.mapped, 0, 32);
     Util::RelAccX A(f.mapped, false);
     if (!A.isReady()){
-      A.addField("cmd", RAX_STRING, 1024);
+      A.addField("cmd", RAX_STRING, 10240);
       A.addField("pid", RAX_64UINT);
       A.setReady();
     }
@@ -60,7 +60,7 @@ namespace Controller{
 
   /// Reads active connectors from the shared memory pages
   void loadActiveConnectors(){
-    IPC::sharedPage f("MstCnns", 409600, false, false);
+    IPC::sharedPage f("MstCnns", 4096000, false, false);
     const Util::RelAccX A(f.mapped, false);
     if (A.isReady()){
       INFO_MSG("Reloading existing connectors to complete rolling restart");
@@ -78,7 +78,7 @@ namespace Controller{
   /// Deletes the shared memory page with connector information
   /// in preparation of shutdown.
   void prepareActiveConnectorsForShutdown(){
-    IPC::sharedPage f("MstCnns", 409600, false, false);
+    IPC::sharedPage f("MstCnns", 4096000, false, false);
     if (f){f.master = true;}
   }
 
