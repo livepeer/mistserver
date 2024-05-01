@@ -746,30 +746,40 @@ namespace Mist{
         if (!shmStreams){
           WARN_MSG("Cannot access stream statistics - unable to apply min_viewers requirement! Starting process without knowing viewer count instead.");
         }else{
-          Util::RelAccX rlxStreams(shmStreams.mapped, false);
-          if (!rlxStreams.isReady()){
-            WARN_MSG("Stream statistics not ready yet - looking again in a bit...");
-            continue;
-          }
           uint64_t viewers = 0;
-          uint64_t startPos = rlxStreams.getDeleted();
-          uint64_t endPos = rlxStreams.getEndPos();
-          for (uint64_t cPos = startPos; cPos < endPos; ++cPos){
-            std::string strm = rlxStreams.getPointer("stream", cPos);
-            if (strm == streamName){
-              viewers = rlxStreams.getInt("viewers", cPos) + rlxStreams.getInt("outputs", cPos);
-              break;
+          Util::RelAccX rlxStreams(shmStreams.mapped, false);
+          if (rlxStreams.isReady()){
+            uint64_t startPos = rlxStreams.getDeleted();
+            uint64_t endPos = rlxStreams.getEndPos();
+            for (uint64_t cPos = startPos; cPos < endPos; ++cPos){
+              std::string strm = rlxStreams.getPointer("stream", cPos);
+              if (strm == streamName){
+                viewers = rlxStreams.getInt("viewers", cPos) + rlxStreams.getInt("outputs", cPos);
+                INFO_MSG("Viewers=%" PRIu64 " + Outputs=%" PRIu64 " < %" PRIu64 " + %zu", rlxStreams.getInt("viewers", cPos), rlxStreams.getInt("outputs", cPos), tmp["min_viewers"].asInt(), runningProcs.size());
+                break;
+              }
             }
+          }else{
+            WARN_MSG("Stream statistics not available!");
           }
           if (viewers < tmp["min_viewers"].asInt() + runningProcs.size()){
-            WARN_MSG("Removing delay for next boot: %s", key.c_str());
             procNextBoot.erase(key);
-            continue;
-          }
-          if (!procNextBoot.count(key)){
-            WARN_MSG("Setting next boot to 5s in the future for: %s", key.c_str());
-            procNextBoot[key] = now + 5000;
-
+            if (!procNextStop.count(key)){
+              // Not running already? Skip it immediately.
+              if (!runningProcs.count(key)){continue;}
+              // Otherwise, kill it in 20s.
+              WARN_MSG("Setting next stop to 20s in the future for: %s", key.c_str());
+              procNextStop[key] = now + 20000;
+            }else{
+              // Skip it if the next stop has passed.
+              if (procNextStop[key] <= now){continue;}
+            }
+          }else{
+            procNextStop.erase(key);
+            if (!procNextBoot.count(key)){
+              WARN_MSG("Setting next boot to 5s in the future for: %s", key.c_str());
+              procNextBoot[key] = now + 5000;
+            }
           }
         }
       }

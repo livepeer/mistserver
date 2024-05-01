@@ -248,11 +248,14 @@ int main(int argc, char **argv){
   if (thisStreamName.size()){streamLastActive[thisStreamName] = now;}
   if (memcmp(thisHost.data(), nullAddress, 16)){hostLastActive[thisHost] = now;}
 
+  size_t statDelay = STATS_DELAY;
   // Determine session type, since triggers only get run for viewer type sessions
   if (thisSessionId[0] == 'I'){
     thisType = 1;
+    statDelay = 2;
   } else if (thisSessionId[0] == 'O'){
     thisType = 2;
+    statDelay = 2;
   } else if (thisSessionId[0] == 'U'){
     thisType = 3;
   }
@@ -283,7 +286,7 @@ int main(int argc, char **argv){
     INFO_MSG("Started new session %s in %.3f ms", thisSessionId.c_str(), (double)Util::getMicros(bootTime)/1000.0);
 
     // Stay active until Mist exits or we no longer have an active connection
-    while (config.is_active && (currentConnections || now - lastSeen <= STATS_DELAY) && !connections.getExit()){
+    while (config.is_active && (currentConnections || now - lastSeen <= statDelay) && !connections.getExit()){
       currentConnections = 0;
       lastSecond = 0;
       now = Util::bootSecs();
@@ -315,7 +318,7 @@ int main(int argc, char **argv){
           std::stringstream connectorSummary;
           for (std::map<std::string, uint64_t>::iterator it = connectorLastActive.begin();
                 it != connectorLastActive.end(); ++it){
-            if (now - it->second < STATS_DELAY){
+            if (now - it->second < statDelay){
               connectorSummary << (connectorSummary.str().size() ? "," : "") << it->first;
             }
           }
@@ -327,7 +330,7 @@ int main(int argc, char **argv){
           std::string thisHost;
           for (std::map<std::string, uint64_t>::iterator it = hostLastActive.begin();
                 it != hostLastActive.end(); ++it){
-            if (now - it->second < STATS_DELAY){
+            if (now - it->second < statDelay){
               if (!thisHost.size()){
                 thisHost = it->first;
               }else if (thisHost != it->first){
@@ -347,7 +350,7 @@ int main(int argc, char **argv){
           std::string thisStream = "";
           for (std::map<std::string, uint64_t>::iterator it = streamLastActive.begin();
                 it != streamLastActive.end(); ++it){
-            if (now - it->second < STATS_DELAY){
+            if (now - it->second < statDelay){
               if (!thisStream.size()){
                 thisStream = it->first;
               }else if (thisStream != it->first){
@@ -389,8 +392,8 @@ int main(int argc, char **argv){
     }
     shouldSleep = connections.getExit();
   }//connections scope end
-  if (Util::bootSecs() - lastSeen > STATS_DELAY){
-    Util::logExitReason(ER_CLEAN_INACTIVE, "Session inactive for %d seconds", STATS_DELAY);
+  if (Util::bootSecs() - lastSeen > statDelay){
+    Util::logExitReason(ER_CLEAN_INACTIVE, "Session inactive for %d seconds", statDelay);
   }
 
   // Trigger USER_END
