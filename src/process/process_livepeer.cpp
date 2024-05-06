@@ -924,20 +924,6 @@ int main(int argc, char *argv[]){
     dl.setHeader("Authorization", "Bearer "+Mist::opt["access_token"].asStringRef());
   }
 
-  {
-    std::string src = M.getSource();
-    size_t qMark = src.rfind('?');
-    if (qMark != std::string::npos){
-      std::map<std::string, std::string> vars;
-      HTTP::parseVars(src.substr(qMark + 1), vars);
-      if (vars.count("lpbc")){
-        JSON::Value bclist;
-        bclist.append(vars["lpbc"]);
-        Mist::opt["hardcoded_broadcasters"] = bclist.toString();
-      }
-    }
-  }
-
   if (Mist::opt.isMember("hardcoded_broadcasters") && Mist::opt["hardcoded_broadcasters"] && Mist::opt["hardcoded_broadcasters"].isString()){
     const std::string & hcbc = Mist::opt["hardcoded_broadcasters"].asStringRef();
     // Detect array
