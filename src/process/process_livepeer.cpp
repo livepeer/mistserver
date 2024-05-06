@@ -954,23 +954,7 @@ int main(int argc, char *argv[]){
   }
 
   if (Mist::opt.isMember("hardcoded_broadcasters") && Mist::opt["hardcoded_broadcasters"] && Mist::opt["hardcoded_broadcasters"].isString()){
-    const std::string & hcbc = Mist::opt["hardcoded_broadcasters"].asStringRef();
-    // Detect array
-    if (hcbc.size() && hcbc[0] == '['){
-      Mist::lpBroad = JSON::fromString(hcbc);
-      // If an array element is a string, assume it's the address field only
-      jsonForEach(Mist::lpBroad, it){
-        if (it->isString()){
-          std::string tmp = it->asStringRef();
-          (*it)["address"] = tmp;
-        }
-      }
-    }
-    // If the first letter is H, assume it's a single broadcaster's address field.
-    if (hcbc.size() && hcbc[0] == 'h'){
-      Mist::lpBroad.null();
-      Mist::lpBroad[0u]["address"] = hcbc;
-    }
+    Mist::lpBroad = JSON::fromString(Mist::opt["hardcoded_broadcasters"].asStringRef());
   } else {
     //Get broadcaster list, pick first valid address
     if (!dl.get(HTTP::URL(api_url+"/broadcaster"))){
