@@ -139,26 +139,38 @@ namespace Mist{
           size_t dataLen = 0;
           thisPacket.getString("data", dataPointer, dataLen);
           std::string codec = M.getCodec(thisIdx);
-          if (codec == "H264" && dataLen > 3){
-            uint8_t nalType = (dataPointer[4] & 0x1F);
-            switch (nalType){
-              case 0x07: // sps
-              case 0x08: // pps
-                shouldSplit = true;
-                INFO_MSG("Switching to new segment since the current keyframe contains new init data");
-              default:
-                break;
+          if (codec == "H264" && dataLen > 4){
+            size_t offset = 0;
+            while (offset + 4 < dataLen){
+              size_t nalSize = Bit::btohl(dataPointer+offset);
+              if (!nalSize){break;}
+              uint8_t nalType = (dataPointer[offset+4] & 0x1F);
+              offset += nalSize + 4;
+              switch (nalType){
+                case 0x07: // sps
+                case 0x08: // pps
+                  shouldSplit = true;
+                  INFO_MSG("Switching to new segment since the current keyframe contains new init data");
+                default:
+                  break;
+              }
             }
-          }else if (codec == "HEVC" && dataLen > 3){
-            uint8_t nalType = (dataPointer[4] & 0x7E) >> 1;
-            switch (nalType){
-              case 32: // vps
-              case 33: // sps
-              case 34: // pps
-                shouldSplit = true;
-                INFO_MSG("Switching to new segment since the current keyframe contains new init data");
-              default:
-                break;
+          }else if (codec == "HEVC" && dataLen > 4){
+            size_t offset = 0;
+            while (offset + 4 < dataLen){
+              size_t nalSize = Bit::btohl(dataPointer+offset);
+              if (!nalSize){break;}
+              uint8_t nalType = (dataPointer[offset+4] & 0x7E) >> 1;
+              offset += nalSize + 4;
+              switch (nalType){
+                case 32: // vps
+                case 33: // sps
+                case 34: // pps
+                  shouldSplit = true;
+                  INFO_MSG("Switching to new segment since the current keyframe contains new init data");
+                default:
+                  break;
+              }
             }
           }
         }
