@@ -293,6 +293,14 @@ onebinary_header = custom_target('onebinary',
   depends: [onebinary_tgts]
 )
 
+prog_go = find_program('go')
+go_code = custom_target('go-code',
+  input: ['go-code/main.go'],
+  output: ['go-code.a'],
+  command: [prog_go, 'build', '-o', '@OUTPUT0@', '-buildmode', 'c-archive', '@INPUT@'],
+  depends: [onebinary_tgts]
+)
+
 onebinary = executable(
   'MistServer',
   [
@@ -318,6 +326,7 @@ onebinary = executable(
     embed_tgts,
     server_html,
     onebinary_header,
+    go_code,
   ],
   cpp_args: [
     '-DTS_BASECLASS=Output',
