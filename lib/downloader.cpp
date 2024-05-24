@@ -332,6 +332,8 @@ namespace HTTP{
         if (nbLoop < 2){
           FAIL_MSG("Exceeded retry limit while retrieving %s (%zu/%" PRIu32 ")",
                    nbLink.getUrl().c_str(), retryCount - nbLoop + 1, retryCount);
+          H.url = "600";
+          H.method = "Downloader retry limit exceeded";
           Util::sleep(100);
           return true;
         }
