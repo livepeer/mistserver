@@ -220,7 +220,7 @@ def binaries_pipeline(context, platform):
             {
                 "name": "upload",
                 "commands": [
-                    'scripts/upload_build.sh -d "$(realpath ..)/bin" "livepeer-mistserver-%s-%s.tar.gz"'
+                    'scripts/upload_build.sh -f -d "$(realpath ..)/bin" "livepeer-mistserver-%s-%s.tar.gz"'
                     % (platform["os"], platform["arch"]),
                 ],
                 "environment": get_environment(
@@ -302,7 +302,7 @@ def checksum_pipeline(context):
             {
                 "name": "upload",
                 "commands": [
-                    'scripts/upload_build.sh -d "$(realpath ..)/download" "{}"'.format(
+                    'scripts/upload_build.sh -f -d "$(realpath ..)/download" "{}"'.format(
                         checksum_file,
                     ),
                 ],
@@ -366,7 +366,7 @@ def branch_manifest_pipeline(context):
             {
                 "name": "upload",
                 "commands": [
-                    'scripts/upload_build.sh -f -r -d "$(realpath ..)" "{}.json"'.format(
+                    'scripts/upload_build.sh -f -f -r -d "$(realpath ..)" "{}.json"'.format(
                         clean_branch,
                     ),
                 ],
