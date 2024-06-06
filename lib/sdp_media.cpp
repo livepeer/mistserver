@@ -793,8 +793,8 @@ namespace SDP{
     return (m != NULL) ? true : false;
   }
 
-  bool Answer::enableVideo(const std::string &codecName){
-    if (!enableMedia("video", codecName, answerVideoMedia, answerVideoFormat)){
+  bool Answer::enableVideo(const std::string &codecName, SDP::Session &sdpSession){
+    if (!enableMedia("video", codecName, answerVideoMedia, answerVideoFormat, sdpSession)){
       DONTEVEN_MSG("Failed to enable video.");
       return false;
     }
@@ -802,8 +802,8 @@ namespace SDP{
     return true;
   }
 
-  bool Answer::enableAudio(const std::string &codecName){
-    if (!enableMedia("audio", codecName, answerAudioMedia, answerAudioFormat)){
+  bool Answer::enableAudio(const std::string &codecName, SDP::Session &sdpSession){
+    if (!enableMedia("audio", codecName, answerAudioMedia, answerAudioFormat, sdpSession)){
       DONTEVEN_MSG("Not enabling audio.");
       return false;
     }
@@ -1065,7 +1065,7 @@ namespace SDP{
   //                             support; we select the first
   //                             one that we find.
   bool Answer::enableMedia(const std::string &type, const std::string &codecList,
-                           SDP::Media &outMedia, SDP::MediaFormat &outFormat){
+                           SDP::Media &outMedia, SDP::MediaFormat &outFormat, SDP::Session &sdpSession){
     Media *media = sdpOffer.getMediaForType(type);
     if (!media){
       INFO_MSG("Cannot enable %s codec; offer doesn't have %s media.", codecList.c_str(), type.c_str());
@@ -1135,8 +1135,12 @@ namespace SDP{
     outMedia = *media;
     outFormat = *format;
     outFormat.rtcpFormats.clear();
-    outFormat.icePwd = generateIcePwd();
-    outFormat.iceUFrag = generateIceUFrag();
+    if (!sdpSession.icePwd.size()){
+      sdpSession.icePwd = generateIcePwd();
+      sdpSession.iceUFrag = generateIceUFrag();
+    }
+    outFormat.icePwd = sdpSession.icePwd;
+    outFormat.iceUFrag = sdpSession.iceUFrag;
 
     return true;
   }
