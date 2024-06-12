@@ -1363,6 +1363,9 @@ namespace DTSC{
   /// Reloads shared memory pages that are marked as needing an update, if any
   /// Returns true if a reload happened
   bool Meta::reloadReplacedPagesIfNeeded(){
+    // Abort if more than 120 reload failures have happened
+    static uint64_t reloadFailures = 0;
+    if (reloadFailures > 120){return false;}
     if (isMemBuf){return false;}//Only for shm-backed metadata
     if (!stream.isReady() || !stream.getPointer("tracks")){
       INFO_MSG("No track pointer, not refreshing.");
@@ -1402,6 +1405,7 @@ namespace DTSC{
         p.init(trackList.getPointer("page", i), SHM_STREAM_TRACK_LEN, false, false);
         if (!p.mapped){
           WARN_MSG("Failed to load page %s, retrying later", trackList.getPointer("page", i));
+          ++reloadFailures;
           tM.erase(i);
           tracks.erase(i);
           continue;
