@@ -1397,6 +1397,9 @@ namespace DTSC{
   /// Reloads shared memory pages that are marked as needing an update, if any
   /// Returns true if a reload happened
   bool Meta::reloadReplacedPagesIfNeeded(){
+    // Abort if more than 120 reload failures have happened
+    static uint64_t reloadFailures = 0;
+    if (reloadFailures > 120){return false;}
     if (isMemBuf){return false;}//Only for shm-backed metadata
     if (!stream.isReady() || !stream.getPointer(streamTracksField)){
       INFO_MSG("No track pointer, not refreshing.");
@@ -1439,6 +1442,7 @@ namespace DTSC{
         p.init(trackList.getPointer(trackPageField, i), SHM_STREAM_TRACK_LEN, false, false);
         if (!p.mapped){
           WARN_MSG("Failed to load page %s, retrying later", trackList.getPointer(trackPageField, i));
+          ++reloadFailures;
           tM.erase(i);
           tracks.erase(i);
           continue;
@@ -1921,11 +1925,11 @@ namespace DTSC{
   bool Meta::isClaimed(size_t trackIdx) const{
     return (trackList.getInt(trackPidField, trackIdx) != 0);
   }
-  
+
   uint64_t Meta::isClaimedBy(size_t trackIdx) const{
     return trackList.getInt(trackPidField, trackIdx);
   }
-  
+
   void Meta::claimTrack(size_t trackIdx){
     if (trackList.getInt(trackPidField, trackIdx) != 0){
       FAIL_MSG("Cannot claim track: already claimed by PID %" PRIu64, trackList.getInt(trackPidField, trackIdx));
@@ -3826,7 +3830,7 @@ namespace DTSC{
     if (isFrames){return getValidCount();}
     return getParts(getEndValid()-1) + getFirstPart(getEndValid()-1) - getFirstPart(getFirstValid());
   }
-  
+
   uint32_t Keys::getIndexForTime(uint64_t timestamp){
     uint32_t firstKey = getFirstValid();
     uint32_t endKey = getEndValid();
