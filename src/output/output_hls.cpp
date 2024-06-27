@@ -273,7 +273,12 @@ namespace Mist{
       H.SetHeader("Content-Type", "text/xml");
       H.SetHeader("Server", APPIDENT);
       H.setCORSHeaders();
-      if (method == "OPTIONS" || method == "HEAD"){
+      if (method == "OPTIONS"){
+        H.SendResponse("204", "No content", myConn);
+        responded = true;
+        return;
+      }
+      if (method == "HEAD"){
         H.SendResponse("200", "OK", myConn);
         responded = true;
         return;
@@ -287,8 +292,9 @@ namespace Mist{
       return;
     }// crossdomain.xml
 
-    if (H.method == "OPTIONS"){
+    if (method == "OPTIONS"){
       bool isTS = (HTTP::URL(H.url).getExt().substr(0, 3) != "m3u");
+      H.Clean();
       H.setCORSHeaders();
       if (isTS){
         H.SetHeader("Content-Type", "video/mp2t");
@@ -311,7 +317,7 @@ namespace Mist{
         H.SetHeader("Cache-Control", "no-store");
       }
       H.SetBody("");
-      H.SendResponse("200", "OK", myConn);
+      H.SendResponse("204", "No content", myConn);
       responded = true;
       return;
     }
