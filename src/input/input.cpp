@@ -775,9 +775,9 @@ namespace Mist{
     int returnCode = 1;
     // If no reason is set at all, return the default status
     if (!Util::exitReason[0]){
-      INFO_MSG("Input closing without a set exit reason");
+      WARN_MSG("Input closing without a set exit reason");
     }else if(strncmp(Util::mRExitReason, "CLEAN", 5) == 0){
-      INFO_MSG("Input closing cleanly with reason: %s", Util::exitReason);
+      WARN_MSG("Input closing cleanly with reason: %s", Util::exitReason);
       returnCode = 0;
     }else{
       WARN_MSG("Input closing unclean, reason: %s", Util::exitReason);
