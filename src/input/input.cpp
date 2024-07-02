@@ -651,7 +651,7 @@ namespace Mist{
         doInputAbortTrigger(pid, Util::mRExitReason, Util::exitReason);
         memcpy(Util::exitReason, exitReason, 256);
       }
-      
+
       #if DEBUG >= DLVL_DEVEL
       WARN_MSG(
           "Input for stream %s uncleanly shut down (exited %d)! Aborting restart; this is a development build.",
@@ -818,10 +818,10 @@ namespace Mist{
     int returnCode = 1;
     // If no reason is set at all, return the default status
     if (!Util::exitReason[0]){
-      INFO_MSG("Input closing without a set exit reason");
+      WARN_MSG("Input closing without a set exit reason");
     }else if(strncmp(Util::mRExitReason, "CLEAN", 5) == 0){
-      INFO_MSG("Input closing cleanly with reason: %s", Util::exitReason);
-      returnCode = 0; 
+      WARN_MSG("Input closing cleanly with reason: %s", Util::exitReason);
+      returnCode = 0;
     }else{
       WARN_MSG("Input closing unclean, reason: %s", Util::exitReason);
     }
@@ -1110,7 +1110,7 @@ namespace Mist{
       inputServeStats();
     }
   }
-  
+
   void Input::connStats(Comms::Connections &statComm){
     statComm.setUp(0);
     statComm.setDown(streamByteCount());
