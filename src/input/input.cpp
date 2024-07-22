@@ -618,6 +618,7 @@ namespace Mist{
       // Fire the INPUT_ABORT trigger if the child process ends with an abnormal exit code
       // Prevents automatic restarts of the input for unrecoverable errors
       if (WIFEXITED(status)){
+        int exitCode = WEXITSTATUS(status);
         char exitReason[256];
         memcpy(exitReason, Util::exitReason, 256);
         if (exitCode == 2){
