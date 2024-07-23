@@ -318,14 +318,21 @@ namespace Mist{
   }
 
   // If ICE headers are configured, sets them on the given HTTP::Parser instance.
-  void OutWebRTC::setIceHeaders(HTTP::Parser & H){
+  void OutWebRTC::setIceHeaders(const HTTP::Parser & req, HTTP::Parser & H){
     if (!config->getString("iceservers").size()){return;}
+    std::string prefix = "";
+    std::string suffix = "";
+    if (req.hasHeader("X-Livepeer-Version") || (req.hasHeader("User-Agent") && req.GetHeader("User-Agent").find("OBS-Studio") != std::string::npos)){
+      prefix = "<";
+      suffix = ">";
+    }
+
     std::deque<std::string> links;
     JSON::Value iceConf = JSON::fromString(config->getString("iceservers"));
     jsonForEach(iceConf, i){
       if (i->isMember("url") && (*i)["url"].isString()){
         JSON::Value &u = (*i)["url"];
-        std::string str = "<"+u.asString()+">; rel=\"ice-server\";";
+        std::string str = prefix+u.asString()+suffix+"; rel=\"ice-server\";";
         if (i->isMember("username")){
           str += " username=" + (*i)["username"].toString() + ";";
         }
@@ -339,7 +346,7 @@ namespace Mist{
       }
       if (i->isMember("urls") && (*i)["urls"].isString()){
         JSON::Value &u = (*i)["urls"];
-        std::string str = "<"+u.asString()+">; rel=\"ice-server\";";
+        std::string str = prefix+u.asString()+suffix+"; rel=\"ice-server\";";
         if (i->isMember("username")){
           str += " username=" + (*i)["username"].toString() + ";";
         }
@@ -354,7 +361,7 @@ namespace Mist{
       if (i->isMember("urls") && (*i)["urls"].isArray()){
         jsonForEach((*i)["urls"], j){
           JSON::Value &u = *j;
-          std::string str = "<"+u.asString()+">; rel=\"ice-server\";";
+          std::string str = prefix+u.asString()+suffix+"; rel=\"ice-server\";";
           if (i->isMember("username")){
             str += " username=" + (*i)["username"].toString() + ";";
           }
@@ -388,7 +395,7 @@ namespace Mist{
     // Generic header/parameter handling
     HTTPOutput::respondHTTP(req, headersOnly);
     // Always send the ICE headers, because why not?
-    setIceHeaders(H);
+    setIceHeaders(req, H);
 
     // Check for WHIP/WHEP payload
     if (headersOnly){
