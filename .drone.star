@@ -38,7 +38,7 @@ def get_docker_tags(repo, prefix, debug, build_info, *args, arch=""):
         commit,
         commit[:8],
     ] + list(args)
-    if branch in ("catalyst", "catalyst-updates", "catalyst-updates-drone"):
+    if branch in ("catalyst", "catalyst-updates", "catalyst-updates-drone", "catalyst_3.4"):
         tags.append("latest")
     suffix = "-debug" if debug else ""
     if arch != "":
