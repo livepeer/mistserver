@@ -181,7 +181,7 @@ def binaries_pipeline(context, platform):
 
     if platform["os"] == "linux":
         # openssl is the fastest in our load testing
-        crypto_library = " -D SRTP_CRYPTO_LIBRARY=openssl "
+        crypto_library = " -D libsrtp:CRYPTO_LIBRARY=openssl "
         steps.append(
             {
                 "name": "libraries",
@@ -193,7 +193,7 @@ def binaries_pipeline(context, platform):
 
     if platform["os"] == "darwin":
         # difficult to get the other options compiling on darwin at the moment
-        crypto_library = " -D SRTP_CRYPTO_LIBRARY=mbedtls "
+        crypto_library = " -D libsrtp:CRYPTO_LIBRARY=mbedtls "
 
     steps.extend(
         [
