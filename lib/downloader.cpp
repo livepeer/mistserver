@@ -569,6 +569,11 @@ namespace HTTP{
     return false;
   }
 
+  std::string Downloader::getCookie() const{
+    if (extraHeaders.count("Cookie")){return "";}
+    return extraHeaders.at("Cookie");
+  }
+
   bool Downloader::canContinue(const HTTP::URL &link){
     if (getStatusCode() == 401){
       // retry with authentication

@@ -16,6 +16,7 @@
 
 std::mutex segMutex;
 std::mutex broadcasterMutex;
+std::string cookie;
 
 //Stat related stuff
 JSON::Value pStat;
@@ -463,6 +464,7 @@ void uploadThread(size_t myNum){
       {
         std::lock_guard<std::mutex> guard(broadcasterMutex);
         target = HTTP::URL(Mist::currBroadAddr+"/live/"+Mist::lpID+"/"+JSON::Value(mySeg.keyNo).asString()+".ts");
+        upper.setHeader("Cookie", cookie);
       }
       upper.dataTimeout = mySeg.segDuration/1000 + 2;
       upper.retryCount = 2;
@@ -485,6 +487,11 @@ void uploadThread(size_t myNum){
           was422 = false;
           prevURL.clear();
           mySeg.fullyWritten = false;
+          {
+            std::lock_guard<std::mutex> guard(broadcasterMutex);
+            std::string newCookie = upper.getCookie();
+            if (newCookie.size() && newCookie != cookie){cookie = newCookie;}
+          }
           //Wait your turn
           while (myNum != insertTurn && conf.is_active){Util::sleep(100);}
           if (!conf.is_active){return;}//Exit early on shutdown
@@ -534,6 +541,7 @@ void uploadThread(size_t myNum){
       bool switchSuccess = false;
       {
         std::lock_guard<std::mutex> guard(broadcasterMutex);
+        cookie.clear();
         std::string prevBroadAddr = Mist::currBroadAddr;
         Mist::pickRandomBroadcaster();
         if (!Mist::currBroadAddr.size()){
