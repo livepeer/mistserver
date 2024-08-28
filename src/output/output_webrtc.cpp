@@ -325,7 +325,7 @@ namespace Mist{
     jsonForEach(iceConf, i){
       if (i->isMember("url") && (*i)["url"].isString()){
         JSON::Value &u = (*i)["url"];
-        std::string str = "<"+u.asString()+">; rel=\"ice-server\";";
+        std::string str = u.asString()+"; rel=\"ice-server\";";
         if (i->isMember("username")){
           str += " username=" + (*i)["username"].toString() + ";";
         }
@@ -339,7 +339,7 @@ namespace Mist{
       }
       if (i->isMember("urls") && (*i)["urls"].isString()){
         JSON::Value &u = (*i)["urls"];
-        std::string str = "<"+u.asString()+">; rel=\"ice-server\";";
+        std::string str = u.asString()+"; rel=\"ice-server\";";
         if (i->isMember("username")){
           str += " username=" + (*i)["username"].toString() + ";";
         }
@@ -354,7 +354,7 @@ namespace Mist{
       if (i->isMember("urls") && (*i)["urls"].isArray()){
         jsonForEach((*i)["urls"], j){
           JSON::Value &u = *j;
-          std::string str = "<"+u.asString()+">; rel=\"ice-server\";";
+          std::string str = u.asString()+"; rel=\"ice-server\";";
           if (i->isMember("username")){
             str += " username=" + (*i)["username"].toString() + ";";
           }
