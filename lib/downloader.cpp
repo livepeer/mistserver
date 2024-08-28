@@ -564,7 +564,7 @@ namespace HTTP{
   }
 
   std::string Downloader::getCookie() const{
-    if (extraHeaders.count("Cookie")){return "";}
+    if (!extraHeaders.count("Cookie")){return "";}
     return extraHeaders.at("Cookie");
   }
 
