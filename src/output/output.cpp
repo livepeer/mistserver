@@ -818,6 +818,7 @@ namespace Mist{
     std::string segment = HTTP::localURIResolver().link(currentTarget).getLinkFrom(playlistLocation);
     if (M.getLive()){
       uint64_t unixMs = M.getBootMsOffset() + systemBoot + currentStartTime;
+      playlistBuffer += "# Stream timing: bootMSOffset=" + JSON::Value(M.getBootMsOffset()).asString() + " systemBoot=" + JSON::Value(systemBoot).asString() + " currentStartTime=" + JSON::Value(currentStartTime).asString() + "\n";
       playlistBuffer += "#EXT-X-PROGRAM-DATE-TIME:" + Util::getUTCStringMillis(unixMs) + "\n";
     }
     INFO_MSG("Adding new segment `%s` of %" PRIu64 "ms to playlist '%s'", segment.c_str(), lastPacketTime - currentStartTime, playlistLocationString.c_str());
