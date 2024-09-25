@@ -123,6 +123,7 @@ namespace Mist{
   }
 
   bool inputFLV::slideWindowTo(size_t seekPos, size_t seekLen){
+    uint64_t preTime = Util::bootMS();
     if (readPos > seekPos || seekPos > readPos + readBuffer.size() + 4*1024*1024){
       readBuffer.truncate(0);
       readBufferOffset = 0;
@@ -165,6 +166,9 @@ namespace Mist{
       }
     }
 
+    if (Util::bootMS() - preTime > 500){
+      WARN_MSG("Seek operation in FLV input took %" PRIu64 "ms!", Util::bootMS() - preTime);
+    }
     return true;
   }
 

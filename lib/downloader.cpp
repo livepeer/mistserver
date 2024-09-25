@@ -343,10 +343,10 @@ namespace HTTP{
                      retryCount - nbLoop + 1, retryCount);
         }else{
           if (retryCount - nbLoop + 1 > 2){
-            INFO_MSG("Lost connection while retrieving %s (%zu/%" PRIu32 ")",
+            WARN_MSG("Lost connection while retrieving %s (%zu/%" PRIu32 ")",
                      nbLink.getUrl().c_str(), retryCount - nbLoop + 1, retryCount);
           }else{
-            MEDIUM_MSG("Lost connection while retrieving %s (%zu/%" PRIu32 ")",
+            WARN_MSG("Lost connection while retrieving %s (%zu/%" PRIu32 ")",
                        nbLink.getUrl().c_str(), retryCount - nbLoop + 1, retryCount);
           }
         }
