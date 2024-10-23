@@ -23,82 +23,6 @@
 
 #define SEM_TS_CLAIM "/MstTSIN%s"
 
-static uint64_t ISO8601toUnixmillis(const std::string &ts){
-  // Format examples:
-  //  2019-12-05T09:41:16.765000+00:00
-  //  2019-12-05T09:41:16.765Z
-  uint64_t unxTime = 0;
-  const size_t T = ts.find('T');
-  if (T == std::string::npos){
-    ERROR_MSG("Timestamp is date-only (no time marker): %s", ts.c_str());
-    return 0;
-  }
-  const size_t Z = ts.find_first_of("Z+-", T);
-  const std::string date = ts.substr(0, T);
-  const std::string time = ts.substr(T + 1, Z - T - 1);
-  const std::string zone = ts.substr(Z);
-  unsigned long year, month, day;
-  if (sscanf(date.c_str(), "%lu-%lu-%lu", &year, &month, &day) != 3){
-    ERROR_MSG("Could not parse date: %s", date.c_str());
-    return 0;
-  }
-  unsigned int hour, minute;
-  double seconds;
-  if (sscanf(time.c_str(), "%u:%d:%lf", &hour, &minute, &seconds) != 3){
-    ERROR_MSG("Could not parse time: %s", time.c_str());
-    return 0;
-  }
-  // Fill the tm struct with the values we just read.
-  // We're ignoring time zone for now, and forcing seconds to zero since we add them in later with more precision
-  struct tm tParts;
-  tParts.tm_sec = 0;
-  tParts.tm_min = minute;
-  tParts.tm_hour = hour;
-  tParts.tm_mon = month - 1;
-  tParts.tm_year = year - 1900;
-  tParts.tm_mday = day;
-  tParts.tm_isdst = 0;
-  // convert to unix time, in seconds
-  unxTime = timegm(&tParts);
-  // convert to milliseconds
-  unxTime *= 1000;
-  // finally add the seconds (and milliseconds)
-  unxTime += (seconds * 1000);
-
-  // Now, adjust for time zone if needed
-  if (zone.size() && zone[0] != 'Z'){
-    bool sign = (zone[0] == '+');
-    {
-      unsigned long hrs, mins;
-      if (sscanf(zone.c_str() + 1, "%lu:%lu", &hrs, &mins) == 2){
-        if (sign){
-          unxTime += mins * 60000 + hrs * 3600000;
-        }else{
-          unxTime -= mins * 60000 + hrs * 3600000;
-        }
-      }else if (sscanf(zone.c_str() + 1, "%lu", &hrs) == 1){
-        if (hrs > 100){
-          if (sign){
-            unxTime += (hrs % 100) * 60000 + ((uint64_t)(hrs / 100)) * 3600000;
-          }else{
-            unxTime -= (hrs % 100) * 60000 + ((uint64_t)(hrs / 100)) * 3600000;
-          }
-        }else{
-          if (sign){
-            unxTime += hrs * 3600000;
-          }else{
-            unxTime -= hrs * 3600000;
-          }
-        }
-      }else{
-        WARN_MSG("Could not parse time zone '%s'; assuming UTC", zone.c_str());
-      }
-    }
-  }
-  DONTEVEN_MSG("Time '%s' = %" PRIu64, ts.c_str(), unxTime);
-  return unxTime;
-}
-
 namespace Mist{
   /// Save playlist objects for manual reloading
   static std::map<uint64_t, Playlist> playlistMapping;
@@ -563,7 +487,7 @@ namespace Mist{
         if (key == "MEDIA-SEQUENCE"){
           fileNo = atoll(val.c_str());
         }
-        if (key == "PROGRAM-DATE-TIME"){nextUTC = ISO8601toUnixmillis(val);}
+        if (key == "PROGRAM-DATE-TIME"){nextUTC = Util::ISO8601toUnixmillis(val);}
 
         if (key == "PLAYLIST-TYPE"){
           if (val == "VOD"){
@@ -894,7 +818,7 @@ namespace Mist{
   bool inputHLS::readHeader(){
     if (streamIsLive && !isLiveDVR){return true;}
     // to analyse and extract data
-    TS::Packet packet; 
+    TS::Packet packet;
     char *data;
     size_t dataLen;
     bool hasPacket = false;
@@ -1320,7 +1244,7 @@ namespace Mist{
       if (!segDowner.readNext()){break;}
       tsBuffer.FromPointer(segDowner.packetPtr);
       tsStream.parse(tsBuffer, streamIsLive && !isLiveDVR ? 0 : plistEntry);
-    } 
+    }
   }
 
   /// \brief Applies any offset to the packets original timestamp
@@ -1591,7 +1515,7 @@ namespace Mist{
         // Init UTC variables used to rewrite packet timestamps
         size_t pos = line.find(":");
         std::string val = line.c_str() + pos + 1;
-        zUTC = ISO8601toUnixmillis(val) - uint64_t(timestampSum);
+        zUTC = Util::ISO8601toUnixmillis(val) - uint64_t(timestampSum);
         nUTC = zUTC;
         INFO_MSG("Setting program unix start time to '%s' (%" PRIu64 ")", line.substr(pos + 1).c_str(), zUTC);
         // store offset so that we can set it after reading the header
