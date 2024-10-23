@@ -609,7 +609,7 @@ namespace Mist{
             }else if (strcmp("#EXT-X-ENDLIST", line.c_str()) == 0){
               INFO_MSG("Stripping line `#EXT-X-ENDLIST`");
               continue;
-            }else if (strcmp("#EXT-X-PROGRAM-DATE-TIME:", line.c_str()) == 0){
+            }else if (strncmp("#EXT-X-PROGRAM-DATE-TIME:", line.c_str(), 21) == 0){
               //Datetime string, convert and store
               recStartTime = Util::ISO8601toUnixmillis(line.substr(25));
             }
@@ -671,7 +671,7 @@ namespace Mist{
             }else if (strcmp("#EXT-X-ENDLIST", line.c_str()) == 0){
               INFO_MSG("Stripping line `#EXT-X-ENDLIST`");
               continue;
-            }else if (strcmp("#EXT-X-PROGRAM-DATE-TIME:", line.c_str()) == 0){
+            }else if (strncmp("#EXT-X-PROGRAM-DATE-TIME:", line.c_str(), 21) == 0){
               //Datetime string, convert and store
               recStartTime = Util::ISO8601toUnixmillis(line.substr(25));
             }
