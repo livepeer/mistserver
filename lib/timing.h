@@ -17,6 +17,7 @@ namespace Util{
   uint64_t getMicros(uint64_t previous); ///< Gets the time difference in microseconds.
   uint64_t getNTP();
   uint64_t epoch(); ///< Gets the amount of seconds since 01/01/1970.
+  uint64_t ISO8601toUnixmillis(const std::string &ts);
   std::string getUTCString(uint64_t epoch = 0);
   std::string getUTCStringMillis(uint64_t epoch_millis = 0);
   uint64_t getMSFromUTCString(std::string UTCString);

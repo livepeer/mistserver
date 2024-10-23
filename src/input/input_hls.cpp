@@ -3,149 +3,6 @@
 
 #define SEM_TS_CLAIM "/MstTSIN%s"
 
-/// Local RAM buffer for recently accessed segments
-std::map<Mist::playListEntries, Util::ResizeablePointer> segBufs;
-/// Order of adding/accessing for local RAM buffer of segments
-std::deque<Mist::playListEntries> segBufAccs;
-/// Order of adding/accessing sizes for local RAM buffer of segments
-std::deque<size_t> segBufSize;
-size_t segBufTotalSize = 0;
-
-/// Read data for a segment, update buffer sizes to match
-bool readNext(Mist::SegmentReader & S, DTSC::Packet & thisPacket, uint64_t bytePos){
-  //Overwrite the current segment size
-  segBufTotalSize -= segBufSize.front();
-  bool ret = S.readNext(thisPacket, bytePos);
-  segBufSize.front() = S.getDataCallbackPos();
-  segBufTotalSize += segBufSize.front();
-  return ret;
-}
-
-/// Load a new segment, use cache if possible or create a new cache entry
-bool loadSegment(Mist::SegmentReader & S, const Mist::playListEntries & entry){
-  if (!segBufs.count(entry)){
-    HIGH_MSG("Reading non-cache: %s", entry.shortName().c_str());
-    //Remove cache entries while above 16MiB in total size, unless we only have 1 entry (we keep two at least at all times)
-    while (segBufTotalSize > 16 * 1024 * 1024 && segBufs.size() > 1){
-      HIGH_MSG("Dropping from segment cache: %s", segBufAccs.back().shortName().c_str());
-      segBufs.erase(segBufAccs.back());
-      segBufTotalSize -= segBufSize.back();
-      segBufAccs.pop_back();
-      segBufSize.pop_back();
-    }
-    segBufAccs.push_front(entry);
-    segBufSize.push_front(0);
-  }else{
-    HIGH_MSG("Reading from cache: %s", entry.shortName().c_str());
-    // Ensure current entry is the front entry in the deques
-    std::deque<Mist::playListEntries> segBufAccsCopy = segBufAccs;
-    std::deque<size_t> segBufSizeCopy = segBufSize;
-    segBufAccs.clear();
-    segBufSize.clear();
-    size_t thisSize = 0;
-    
-    while (segBufSizeCopy.size()){
-      if (segBufAccsCopy.back() == entry){
-        thisSize = segBufSizeCopy.back();
-      }else{
-        segBufAccs.push_front(segBufAccsCopy.back());
-        segBufSize.push_front(segBufSizeCopy.back());
-      }
-      segBufAccsCopy.pop_back();
-      segBufSizeCopy.pop_back();
-    }
-    segBufAccs.push_front(entry);
-    segBufSize.push_front(thisSize);
-  }
-  return S.load(entry.filename, entry.startAtByte, entry.stopAtByte, entry.ivec, entry.keyAES, &(segBufs[entry]));
-}
-
-
-
-
-static uint64_t ISO8601toUnixmillis(const std::string &ts){
-  // Format examples:
-  //  2019-12-05T09:41:16.765000+00:00
-  //  2019-12-05T09:41:16.765Z
-  uint64_t unxTime = 0;
-  const size_t T = ts.find('T');
-  if (T == std::string::npos){
-    ERROR_MSG("Timestamp is date-only (no time marker): %s", ts.c_str());
-    return 0;
-  }
-  const size_t Z = ts.find_first_of("Z+-", T);
-  const std::string date = ts.substr(0, T);
-  std::string time;
-  std::string zone;
-  if (Z == std::string::npos){
-    WARN_MSG("HLS segment timestamp is missing timezone information! Assumed to be UTC.");
-    time = ts.substr(T + 1);
-  }else{
-    time = ts.substr(T + 1, Z - T - 1);
-    zone = ts.substr(Z);
-  }
-  unsigned long year, month, day;
-  if (sscanf(date.c_str(), "%lu-%lu-%lu", &year, &month, &day) != 3){
-    ERROR_MSG("Could not parse date: %s", date.c_str());
-    return 0;
-  }
-  unsigned int hour, minute;
-  double seconds;
-  if (sscanf(time.c_str(), "%u:%d:%lf", &hour, &minute, &seconds) != 3){
-    ERROR_MSG("Could not parse time: %s", time.c_str());
-    return 0;
-  }
-  // Fill the tm struct with the values we just read.
-  // We're ignoring time zone for now, and forcing seconds to zero since we add them in later with more precision
-  struct tm tParts;
-  tParts.tm_sec = 0;
-  tParts.tm_min = minute;
-  tParts.tm_hour = hour;
-  tParts.tm_mon = month - 1;
-  tParts.tm_year = year - 1900;
-  tParts.tm_mday = day;
-  tParts.tm_isdst = 0;
-  // convert to unix time, in seconds
-  unxTime = timegm(&tParts);
-  // convert to milliseconds
-  unxTime *= 1000;
-  // finally add the seconds (and milliseconds)
-  unxTime += (seconds * 1000);
-
-  // Now, adjust for time zone if needed
-  if (zone.size() && zone[0] != 'Z'){
-    bool sign = (zone[0] == '+');
-    {
-      unsigned long hrs, mins;
-      if (sscanf(zone.c_str() + 1, "%lu:%lu", &hrs, &mins) == 2){
-        if (sign){
-          unxTime += mins * 60000 + hrs * 3600000;
-        }else{
-          unxTime -= mins * 60000 + hrs * 3600000;
-        }
-      }else if (sscanf(zone.c_str() + 1, "%lu", &hrs) == 1){
-        if (hrs > 100){
-          if (sign){
-            unxTime += (hrs % 100) * 60000 + ((uint64_t)(hrs / 100)) * 3600000;
-          }else{
-            unxTime -= (hrs % 100) * 60000 + ((uint64_t)(hrs / 100)) * 3600000;
-          }
-        }else{
-          if (sign){
-            unxTime += hrs * 3600000;
-          }else{
-            unxTime -= hrs * 3600000;
-          }
-        }
-      }else{
-        WARN_MSG("Could not parse time zone '%s'; assuming UTC", zone.c_str());
-      }
-    }
-  }
-  DONTEVEN_MSG("Time '%s' = %" PRIu64, ts.c_str(), unxTime);
-  return unxTime;
-}
-
 namespace Mist{
   /// Save playlist objects for manual reloading
   std::map<uint64_t, Playlist*> playlistMapping;
@@ -373,7 +230,7 @@ namespace Mist{
           }
 
           if (key == "PROGRAM-DATE-TIME"){
-            nextUTC = ISO8601toUnixmillis(val);
+            nextUTC = Util::ISO8601toUnixmillis(val);
             continue;
           }
 
@@ -637,7 +494,7 @@ namespace Mist{
       Util::logExitReason(ER_UNKNOWN, "Failed to load HLS playlist, aborting");
       return false;
     }
-    
+
     // Segments can be added (and removed if VOD is false)
     meta.setLive(streamIsLive);
     // Segments can not be removed
@@ -762,7 +619,7 @@ namespace Mist{
 
   bool InputHLS::readHeader(){
     // to analyse and extract data
-    TS::Packet packet; 
+    TS::Packet packet;
     char *data;
     size_t dataLen;
     meta.reInit(isSingular() ? streamName : "");
@@ -1432,7 +1289,8 @@ namespace Mist{
         // Init UTC variables used to rewrite packet timestamps
         size_t pos = line.find(":");
         std::string val = line.c_str() + pos + 1;
-        zUTC = ISO8601toUnixmillis(val) - uint64_t(timestampSum);
+        zUTC = Util::ISO8601toUnixmillis(val) - uint64_t(timestampSum);
+        nUTC = zUTC;
         INFO_MSG("Setting program unix start time to '%s' (%" PRIu64 ")", line.substr(pos + 1).c_str(), zUTC);
         // store offset so that we can set it after reading the header
         streamOffset = zUTC - (Util::unixMS() - Util::bootMS());
