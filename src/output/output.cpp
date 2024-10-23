@@ -15,7 +15,7 @@
 #include <sys/socket.h>
 #include <sys/stat.h>
 
-#include "output.h" 
+#include "output.h"
 #include <mist/bitfields.h>
 #include <mist/defines.h>
 #include <mist/h264.h>
@@ -553,7 +553,7 @@ namespace Mist{
     //Return the next key
     return keys.getTime(keyNum+1);
   }
-  
+
   uint64_t Output::pageNumForKey(size_t trackId, size_t keyNum){
     const Util::RelAccX &tPages = M.pages(trackId);
     for (uint64_t i = tPages.getDeleted(); i < tPages.getEndPos(); i++){
@@ -612,18 +612,31 @@ namespace Mist{
         std::string line;
         // If appending, remove endlist and count segments
         if (targetParams.count("append")){
+          uint64_t recStartTime = 0;
           while (std::getline(inFile, line)) {
             if (strncmp("#EXTINF", line.c_str(), 7) == 0){
+              if (recStartTime && line.size() > 8){
+                float f = atof(line.c_str() + 8);
+                recStartTime += (f * 1000);
+              }
               segmentCount++;
             }else if (strcmp("#EXT-X-ENDLIST", line.c_str()) == 0){
               INFO_MSG("Stripping line `#EXT-X-ENDLIST`");
               continue;
+            }else if (strcmp("#EXT-X-PROGRAM-DATE-TIME:", line.c_str()) == 0){
+              //Datetime string, convert and store
+              recStartTime = Util::ISO8601toUnixmillis(line.substr(25));
             }
             playlistBuffer += line + '\n';
           }
           playlistBuffer += "#EXT-X-DISCONTINUITY\n";
           INFO_MSG("Appending to existing local playlist file '%s'", playlistLocationString.c_str());
           INFO_MSG("Found %" PRIu64 " prior segments", segmentCount);
+          if (recStartTime){
+            std::string timeStr = Util::getUTCStringMillis(recStartTime);
+            INFO_MSG("Previous data ends at %s; seeking to that time!", timeStr.c_str());
+            targetParams["startunixms"] = JSON::Value(recStartTime).asString();
+          }
         }else{
           // Remove all segments referenced in the playlist
           while (std::getline(inFile, line)) {
@@ -966,7 +979,7 @@ namespace Mist{
     while (keepGoing() && pageNum == INVALID_KEY_NUM){
       if (!timeout){HIGH_MSG("Requesting page with key %zu:%zu", trackId, keyNum);}
       ++timeout;
-      //Time out after 15s for live or 30s for vod 
+      //Time out after 15s for live or 30s for vod
       if (timeout > maxTimeout){
         FAIL_MSG("Timeout while waiting for requested key %zu for track %zu. Aborting.", keyNum, trackId);
         curPage.erase(trackId);
@@ -1379,6 +1392,10 @@ namespace Mist{
       //Autoconvert start/stop to recstart/recstop to improve usability
       if (targetParams.count("start") && !targetParams.count("recstart")){targetParams["recstart"] = targetParams["start"];}
       if (targetParams.count("stop") && !targetParams.count("recstop")){targetParams["recstop"] = targetParams["stop"];}
+      if (M.getLive() && targetParams.count("startunixms")){
+        uint64_t startUnix = atoll(targetParams["startunixms"].c_str()) - M.getUTCOffset();
+        targetParams["recstart"] = JSON::Value(startUnix).asString();
+      }
       // Check recstart/recstop for correctness
       if (targetParams.count("recstop")){
         uint64_t endRec = atoll(targetParams["recstop"].c_str());
@@ -1412,7 +1429,7 @@ namespace Mist{
         }
         targetParams["recstart"] = JSON::Value(seekPos).asString();
       }
-      
+
       // Wait for the stream to catch up to the starttime
       uint64_t streamAvail = endTime();
       uint64_t lastUpdated = Util::getMS();
@@ -1454,7 +1471,7 @@ namespace Mist{
         }
       }
       // Print calculated start and stop time
-      INFO_MSG("Recording will start at timestamp %" PRIu64 " ms", seekPos); 
+      INFO_MSG("Recording will start at timestamp %" PRIu64 " ms", seekPos);
       if (targetParams.count("recstop")){
         INFO_MSG("Recording will stop at timestamp %llu ms", atoll(targetParams["recstop"].c_str()));
       }
@@ -1472,7 +1489,7 @@ namespace Mist{
       if (M.getLive() && targetParams.count("pushdelay")){
         INFO_MSG("Converting pushdelay syntax into corresponding recstart+realtime options");
 
-        uint64_t delayTime = JSON::Value(targetParams["pushdelay"]).asInt()*1000; 
+        uint64_t delayTime = JSON::Value(targetParams["pushdelay"]).asInt()*1000;
         if (endTime() - startTime() < delayTime){
           uint64_t waitTime = delayTime - (endTime() - startTime());
           uint64_t waitTarget = Util::bootMS() + waitTime;
@@ -1808,7 +1825,7 @@ namespace Mist{
     uint64_t systemBoot = 0; //< Global config variable used for the #EXT-X-PROGRAM-DATE-TIME tag
     bool addEndlist = true;
 
-    std::string origTarget; 
+    std::string origTarget;
     const char* origTargetPtr = getenv("MST_ORIG_TARGET");
     if (origTargetPtr){
       origTarget = origTargetPtr;
@@ -2379,7 +2396,7 @@ namespace Mist{
             }
             return false;//no sleep after reconnect
           }
-          
+
           //Fine! We didn't want a packet, anyway. Let's try again later.
           playbackSleep(10);
           return false;
@@ -2507,7 +2524,7 @@ namespace Mist{
 
       //Okay, there's no next page yet, and no next packet on this page either.
       //That means we're waiting for data to show up, somewhere.
-      
+
       // If it's a live stream, request to be signalled on packet availability
       if (M.getLive()){
         userSelect[nxt.tid].setKeyNum(0xFFFFFFFFFFFFFFFFull);
@@ -2798,7 +2815,7 @@ namespace Mist{
     payl << Util::exitReason << '\n';
     return payl.str();
   }
-  
+
   void Output::recEndTrigger(){
     if (Util::Config::binaryType == Util::OUTPUT && config->hasOption("target") && Triggers::shouldTrigger("RECORDING_END", streamName)){
       Triggers::doTrigger("RECORDING_END", getExitTriggerPayload(), streamName);
@@ -2911,7 +2928,7 @@ namespace Mist{
             // If we could, kill the input
             if (iPid){Util::Procs::Stop(iPid);}
           }
-          
+
           // If resuming is not enabled, wait for the stream to shut down before we continue
           if (resumeSupport != 1){
             INFO_MSG("Waiting for stream reset before attempting push input accept (%" PRIu64 " <= %" PRIu64 "+500)", twoTime, oneTime);
