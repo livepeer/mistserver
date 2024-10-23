@@ -658,6 +658,7 @@ namespace Mist{
       if (outFile){
         // If so, init the buffer with remote data
         if (targetParams.count("append")){
+          uint64_t recStartTime = 0;
           char *dataPtr;
           size_t dataLen;
           outFile.readAll(dataPtr, dataLen);
@@ -670,12 +671,20 @@ namespace Mist{
             }else if (strcmp("#EXT-X-ENDLIST", line.c_str()) == 0){
               INFO_MSG("Stripping line `#EXT-X-ENDLIST`");
               continue;
+            }else if (strcmp("#EXT-X-PROGRAM-DATE-TIME:", line.c_str()) == 0){
+              //Datetime string, convert and store
+              recStartTime = Util::ISO8601toUnixmillis(line.substr(25));
             }
             playlistBuffer += line + '\n';
           }
           playlistBuffer += "#EXT-X-DISCONTINUITY\n";
           INFO_MSG("Found %" PRIu64 " prior segments", segmentCount);
           INFO_MSG("Appending to existing remote playlist file '%s'", playlistLocationString.c_str());
+          if (recStartTime){
+            std::string timeStr = Util::getUTCStringMillis(recStartTime);
+            INFO_MSG("Previous data ends at %s; seeking to that time!", timeStr.c_str());
+            targetParams["startunixms"] = JSON::Value(recStartTime).asString();
+          }
         }else{
           WARN_MSG("Overwriting existing remote playlist file '%s'", playlistLocationString.c_str());
           reInitPlaylist = true;
