@@ -1919,6 +1919,12 @@ namespace Mist{
               WARN_MSG("Timestamp for %s went from %" PRIu64 " to %" PRIu64 " (decreased by %" PRIu64 "): compensating", trackType(next.msg_type_id), ltt, tagTime, diff);
             }
             trackOffset[reTrack] += diff;
+            int64_t bMO = M.getBootMsOffset();
+            uint64_t currTime = Util::bootMS();
+            if (currTime + bMO > tagTime + diff + 5000 || currTime + bMO + 5000 < tagTime + diff){
+              WARN_MSG("Compensating time difference in UTC offset as well");
+              meta.setBootMsOffset(bMO - diff);
+            }
             tagTime += diff;
           }else if (tagTime > ltt + 600000){
             uint64_t diff = tagTime - ltt;
@@ -1939,6 +1945,12 @@ namespace Mist{
             }
             if (ltt){
               trackOffset[reTrack] -= diff;
+              int64_t bMO = M.getBootMsOffset();
+              uint64_t currTime = Util::bootMS();
+              if (currTime + bMO > tagTime - diff + 5000 || currTime + bMO + 5000 < tagTime - diff){
+                WARN_MSG("Compensating time difference in UTC offset as well");
+                meta.setBootMsOffset(bMO + diff);
+              }
               tagTime -= diff;
             }
           }
