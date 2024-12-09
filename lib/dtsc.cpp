@@ -1202,6 +1202,10 @@ namespace DTSC{
       refresh();
     }
     // Initialize internal bufferFields
+    updateFieldDataReferences();
+  }
+
+  void Meta::updateFieldDataReferences(){
     streamVodField = stream.getFieldData("vod");
     streamLiveField = stream.getFieldData("live");
     streamSourceField = stream.getFieldData("source");
@@ -1295,6 +1299,8 @@ namespace DTSC{
       if (origTracks.isReady()){trackList.flowFrom(origTracks);}
     }
 
+    updateFieldDataReferences();
+
     // Set ready so that access is now allowed
     stream.setReady();
     trackList.setReady();
@@ -1385,6 +1391,7 @@ namespace DTSC{
       stream = Util::RelAccX(streamPage.mapped, true);
       tM.clear();
       tracks.clear();
+      updateFieldDataReferences();
       refresh();
       return true;
     }
