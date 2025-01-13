@@ -367,7 +367,7 @@ namespace HTTP{
             downer.getSocket().close();
             downer.getSocket().Received().clear();
             allData.truncate(0);
-            return;
+            return 0;
           }
           WARN_MSG("Received error response code %" PRIu32 " (%s), retrying in a second...", downer.getStatusCode(), downer.getStatusText().c_str());
           cb.dataCallbackFlush();
@@ -376,11 +376,11 @@ namespace HTTP{
           allData.truncate(0);
           Util::sleep(1000);
           downer.getNonBlocking(myURI);
-          return;
+          return 0;
         }
       }
       if (prePos != cb.getDataCallbackPos()){openTime = Util::bootMS();}
-      return;
+      return cb.getDataCallbackPos() - prePos;
     }
     // Everything else uses the socket directly
     int s = downer.getSocket().Received().bytes(wantedLen);
