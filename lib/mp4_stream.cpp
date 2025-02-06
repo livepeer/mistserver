@@ -12,7 +12,7 @@ namespace MP4{
   }
 
   void Stream::open(Util::ResizeablePointer & ptr){
-    
+
   }
 
   bool Stream::hasPacket(size_t tid) const{
@@ -74,6 +74,7 @@ namespace MP4{
     stco64 = false;
     trafMode = false;
     trackId = 0;
+    rotation = 0;
   }
 
   void TrackHeader::nextMoof(){
@@ -114,6 +115,9 @@ namespace MP4{
     if (tkhd.getWidth()){
       vidWidth = tkhd.getWidth();
       vidHeight = tkhd.getHeight();
+    }
+    if (tkhd.getRotation()){
+      rotation = tkhd.getRotation();
     }
 
     STBL stblBox = mdiaBox.getChild<MINF>().getChild<STBL>();
@@ -253,7 +257,7 @@ namespace MP4{
     // Calculate millisecond-time for current timestamp
     uint64_t timePrev = (timeTotal * 1000) / timeScale;
     timeTotal += delta;
-    
+
     //Undo time shifts as much as possible
     if (timeExtra){
       timeTotal -= timeExtra;
