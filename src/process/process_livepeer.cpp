@@ -76,6 +76,7 @@ namespace Mist{
       parseData = true;
       currPreSeg = 0;
     };
+    inline virtual bool keepGoing(){return config->is_active;}
     virtual bool onFinish(){
       if (opt.isMember("exit_unmask") && opt["exit_unmask"].asBool()){
         if (userSelect.size()){
