@@ -5,6 +5,63 @@
 
 #define SEM_TS_CLAIM "/MstTSIN%s"
 
+/// Local RAM buffer for recently accessed segments
+std::map<Mist::playListEntries, Util::ResizeablePointer> segBufs;
+/// Order of adding/accessing for local RAM buffer of segments
+std::deque<Mist::playListEntries> segBufAccs;
+/// Order of adding/accessing sizes for local RAM buffer of segments
+std::deque<size_t> segBufSize;
+size_t segBufTotalSize = 0;
+
+/// Read data for a segment, update buffer sizes to match
+bool readNext(Mist::SegmentReader & S, DTSC::Packet & thisPacket, uint64_t bytePos){
+  //Overwrite the current segment size
+  segBufTotalSize -= segBufSize.front();
+  bool ret = S.readNext(thisPacket, bytePos);
+  segBufSize.front() = S.getDataCallbackPos();
+  segBufTotalSize += segBufSize.front();
+  return ret;
+}
+
+/// Load a new segment, use cache if possible or create a new cache entry
+bool loadSegment(Mist::SegmentReader & S, const Mist::playListEntries & entry){
+  if (!segBufs.count(entry)){
+    HIGH_MSG("Reading non-cache: %s", entry.shortName().c_str());
+    //Remove cache entries while above 16MiB in total size, unless we only have 1 entry (we keep two at least at all times)
+    while (segBufTotalSize > 16 * 1024 * 1024 && segBufs.size() > 1){
+      HIGH_MSG("Dropping from segment cache: %s", segBufAccs.back().shortName().c_str());
+      segBufs.erase(segBufAccs.back());
+      segBufTotalSize -= segBufSize.back();
+      segBufAccs.pop_back();
+      segBufSize.pop_back();
+    }
+    segBufAccs.push_front(entry);
+    segBufSize.push_front(0);
+  }else{
+    HIGH_MSG("Reading from cache: %s", entry.shortName().c_str());
+    // Ensure current entry is the front entry in the deques
+    std::deque<Mist::playListEntries> segBufAccsCopy = segBufAccs;
+    std::deque<size_t> segBufSizeCopy = segBufSize;
+    segBufAccs.clear();
+    segBufSize.clear();
+    size_t thisSize = 0;
+
+    while (segBufSizeCopy.size()){
+      if (segBufAccsCopy.back() == entry){
+        thisSize = segBufSizeCopy.back();
+      }else{
+        segBufAccs.push_front(segBufAccsCopy.back());
+        segBufSize.push_front(segBufSizeCopy.back());
+      }
+      segBufAccsCopy.pop_back();
+      segBufSizeCopy.pop_back();
+    }
+    segBufAccs.push_front(entry);
+    segBufSize.push_front(thisSize);
+  }
+  return S.load(entry.filename, entry.startAtByte, entry.stopAtByte, entry.ivec, entry.keyAES, &(segBufs[entry]));
+}
+
 namespace Mist{
   /// Save playlist objects for manual reloading
   std::map<uint64_t, Playlist*> playlistMapping;
@@ -1255,7 +1312,6 @@ namespace Mist{
         size_t pos = line.find(":");
         std::string val = line.c_str() + pos + 1;
         zUTC = Util::ISO8601toUnixmillis(val) - uint64_t(timestampSum);
-        nUTC = zUTC;
         INFO_MSG("Setting program unix start time to '%s' (%" PRIu64 ")", line.substr(pos + 1).c_str(), zUTC);
         // store offset so that we can set it after reading the header
         streamOffset = zUTC - (Util::unixMS() - Util::bootMS());

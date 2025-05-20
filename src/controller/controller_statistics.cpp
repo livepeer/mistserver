@@ -16,7 +16,6 @@
 #include <sys/statvfs.h> //for fstatvfs
 #include <mist/triggers.h>
 #include <signal.h>
-#include <mist/tinythread.h>
 #include <mist/ptvtmp.h>
 
 #ifndef KILL_ON_EXIT
@@ -845,7 +844,7 @@ void Controller::statSession::update(uint64_t index, Comms::Sessions &statComm){
     }
   }
   // Only count connections that are countable
-  if (noBWCount != 2 && streamName.size()){ 
+  if (noBWCount != 2 && streamName.size()){
     createEmptyStatsIfNeeded(streamName);
     streamTotals & sT = streamStats[streamName];
     sT.upBytes += currUp - prevUp;
