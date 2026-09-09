@@ -7,6 +7,6 @@
   },
   "dependencies": {
     "clean-css-cli": "^4.3.0",
-    "terser": "^3.17.0"
+    "terser": "^5.51.2"
   }
 }
